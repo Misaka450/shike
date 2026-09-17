@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 process.env.DB_PATH = ':memory:';
 
 // 动态导入：保证 DB_PATH 在模块初始化前生效
-const { deleteRecipe, RecipeError, getRecipeById, listRecipes } = await import('../recipeService.js');
+const { deleteRecipe, RecipeError, getRecipeById, listRecipes, recommendRecipes, invalidateRecipeCache } = await import('../recipeService.js');
 const { db } = await import('../../db/index.js');
 
 function insertMockAiRecipe(id: string, name: string = '✨ AI定制 · 测试菜谱'): void {
@@ -121,5 +121,41 @@ describe('deleteRecipe（删除 AI 菜谱业务逻辑）', () => {
         return true;
       }
     );
+  });
+
+  it('即使数据库中存在 ai-recipe-，常规 recommendRecipes 也绝不会将其返回', () => {
+    const aiRecipeId = `ai-recipe-rec-test-${Date.now()}`;
+    insertMockAiRecipe(aiRecipeId, '✨ AI定制 · 绝密西红柿炒蛋');
+    invalidateRecipeCache();
+
+    const mockInventory = [
+      {
+        id: 101,
+        user_id: 'guest_test',
+        name: '西红柿',
+        category: '蔬菜',
+        quantity: '2个',
+        unit: '',
+        storage_location: '冷藏',
+        confidence: 1,
+        storage_days: 3,
+        expiry_date: '2099-12-31',
+        added_at: '2026-09-17T00:00:00.000Z',
+        status: 'active' as const,
+        updated_at: '2026-09-17T00:00:00.000Z',
+        urgency_level: 'red' as const,
+        days_remaining: 0,
+      },
+    ];
+
+    const recommendations = recommendRecipes(mockInventory);
+    assert.ok(recommendations.length > 0);
+    for (const rec of recommendations) {
+      assert.ok(
+        !rec.id.startsWith('ai-recipe-'),
+        `常规推荐列表绝不能包含 AI 菜谱: ${rec.id}`
+      );
+    }
+    assert.ok(!recommendations.some((r) => r.id === aiRecipeId));
   });
 });

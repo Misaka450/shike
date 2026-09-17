@@ -364,7 +364,7 @@ export function deleteRecipe(id: string): boolean {
 
 export function recommendRecipes(
   inventory: InventoryItem[],
-  query?: RecommendQuery
+  query?: Partial<RecommendQuery>
 ): RecipeRecommendation[] {
   const allRecipes = listRecipes({
     cuisine: query?.cuisine,
@@ -377,6 +377,11 @@ export function recommendRecipes(
   const recommendations: RecipeRecommendation[] = [];
 
   for (const recipe of allRecipes) {
+    // 常规推荐列表绝不混入任何历史生成的 AI 菜谱，100% 只来自于严谨量化、真实审核的固定菜谱库
+    if (recipe.id.startsWith('ai-recipe-')) {
+      continue;
+    }
+
     if (query?.max_cook_time && (recipe.cook_time + recipe.prep_time) > query.max_cook_time) {
       continue;
     }
