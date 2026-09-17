@@ -10,16 +10,12 @@ import {
   CheckCircle2,
   Sparkles,
   Plus,
-  Trash2,
   Play,
   Pause,
   RotateCcw,
   X,
-  ArrowRight,
   Utensils,
   Check,
-  Flame,
-  Layers,
   UploadCloud,
   ChevronRight,
   User,
@@ -29,8 +25,7 @@ import {
 import {
   InventoryItem,
   InventorySummary,
-  Recipe,
-  ScannedItem,
+  RecipeRecommendation,
   FridgeScanResult,
 } from '@/lib/types';
 import {
@@ -39,13 +34,18 @@ import {
   deleteInventoryItem,
   scanFridgeImage,
   getRecommendations,
+  generateAiRecipes,
   cookRecipe,
   getCurrentUser,
   loginUser,
   registerUser,
   logoutUser,
   fetchCaptcha,
+  MAX_UPLOAD_BYTES,
 } from '@/lib/api';
+
+/** 点击「AI 菜谱」按钮时一次生成的菜谱数量 */
+const AI_RECIPE_COUNT = 3;
 
 export default function ShikeApp() {
   const [activeTab, setActiveTab] = useState<'recipes' | 'scan' | 'inventory'>('recipes');
@@ -62,9 +62,9 @@ export default function ShikeApp() {
   const [loadingInventory, setLoadingInventory] = useState(false);
 
   // Recommendations State
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipes, setRecipes] = useState<RecipeRecommendation[]>([]);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeRecommendation | null>(null);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   // User Auth State
@@ -73,7 +73,7 @@ export default function ShikeApp() {
     username?: string;
     nickname?: string;
     is_guest: boolean;
-  }>({ user_id: 'guest', nickname: '访客', is_guest: true });
+  }>({ user_id: '', nickname: '访客', is_guest: true });
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authUsername, setAuthUsername] = useState('');
@@ -136,23 +136,30 @@ export default function ShikeApp() {
 
   // Toast / Feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    // 连续弹出提示时先清掉上一个定时器，避免"上一条提示把新提示提前关掉"
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 3000);
   };
 
   // Initial Data Fetch
   const refreshData = async () => {
     try {
-      setUserProfile(getCurrentUser());
       setLoadingInventory(true);
       const inv = await getInventory();
+      // 首个接口调用会确保访客会话已建立（必要时服务端会签发新身份），
+      // 因此在请求之后再同步界面上的用户资料才是准确的
+      setUserProfile(getCurrentUser());
       setInventory(inv.items || []);
       setSummary(inv.summary || { total: 0, red_urgent: 0, yellow_warning: 0, green_safe: 0 });
 
       setLoadingRecipes(true);
-      const rec = await getRecommendations([]);
+      // 这里只做本地推荐计算；AI 现场定制改为用户点击按钮时按需触发，
+      // 避免以前那样"每次刷新页面都可能调用一次大模型"（PER-01）
+      const rec = await getRecommendations();
       setRecipes(rec.recommendations || []);
     } catch (err: any) {
       console.error('Failed to load initial data:', err);
@@ -166,27 +173,52 @@ export default function ShikeApp() {
     refreshData();
   }, []);
 
-  // Timer Interval
+  // 灶台倒计时
+  // 【性能优化 PER-06】只在开始/暂停时建立定时器，剩余秒数由「截止时间戳」推算。
+  // 旧实现把 cookingTimer 放进依赖数组，导致每秒都要销毁并重建一个定时器。
+  const timerDeadlineRef = useRef(0);
+
   useEffect(() => {
-    let interval: any = null;
-    if (isTimerRunning && cookingTimer > 0) {
-      interval = setInterval(() => {
-        setCookingTimer((prev) => prev - 1);
-      }, 1000);
-    } else if (cookingTimer === 0) {
-      setIsTimerRunning(false);
-    }
+    if (!isTimerRunning) return;
+
+    timerDeadlineRef.current = Date.now() + cookingTimer * 1000;
+
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.round((timerDeadlineRef.current - Date.now()) / 1000));
+      setCookingTimer(remaining);
+      if (remaining <= 0) {
+        setIsTimerRunning(false);
+      }
+    }, 1000);
+
     return () => clearInterval(interval);
-  }, [isTimerRunning, cookingTimer]);
+    // cookingTimer 在这里只作为本次计时的起点快照，不需要进入依赖数组
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTimerRunning]);
 
   // Handle Photo Upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setScanResult(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 【体验与安全】前端先做一轮校验，避免用户白等上传后才被服务端拒绝
+    if (!file.type.startsWith('image/')) {
+      showToast('请选择 JPG / PNG / WebP 格式的图片');
+      e.target.value = '';
+      return;
     }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      showToast(`图片过大（${(file.size / 1024 / 1024).toFixed(1)}MB），请压缩到 5MB 以内`);
+      e.target.value = '';
+      return;
+    }
+
+    // 释放上一次创建的预览地址，避免浏览器内存持续增长
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setScanResult(null);
   };
 
   // Trigger AI Scan
@@ -292,6 +324,13 @@ export default function ShikeApp() {
       showToast(msg);
       return;
     }
+    // 注册时先在前端校验密码长度，避免无谓的请求往返（与后端规则保持一致）
+    if (authMode === 'register' && authPassword.trim().length < 6) {
+      const msg = '密码长度至少 6 位';
+      setAuthError(msg);
+      showToast(msg);
+      return;
+    }
 
     try {
       setIsAuthSubmitting(true);
@@ -331,14 +370,15 @@ export default function ShikeApp() {
     }
   };
 
-  const handleLogout = () => {
-    logoutUser();
+  const handleLogout = async () => {
+    // 服务端立即作废当前令牌 → 清理本地数据 → 自动申请一个新的访客会话继续可用
+    await logoutUser();
     setUserProfile(getCurrentUser());
     showToast('已退出登录，恢复本地独立访客模式');
-    refreshData();
+    await refreshData();
   };
 
-  // Trigger AI Chef to design custom recipe
+  // 让 AI 大厨根据现有食材现场设计菜谱（点击按钮才触发，一次生成 3 道）
   const handleTriggerAiChef = async () => {
     if (inventory.length === 0) {
       showToast('冰箱还是空的，先拍一张冰箱照片或录入食材吧！');
@@ -347,13 +387,27 @@ export default function ShikeApp() {
 
     try {
       setIsAiGenerating(true);
-      showToast('AI 大厨正在根据您冰箱现有食材进行头脑风暴...');
-      const rec = await getRecommendations([]);
-      setRecipes(rec.recommendations || []);
-      if (rec.recommendations && rec.recommendations.length > 0) {
-        setSelectedRecipe(rec.recommendations[0]);
-        showToast(`AI 大厨已为你定制新菜谱「${rec.recommendations[0].name}」！`);
+      showToast(`AI 大厨正在为你设计 ${AI_RECIPE_COUNT} 道菜谱，请稍候…`);
+
+      const aiRecipes = await generateAiRecipes(undefined, AI_RECIPE_COUNT);
+
+      if (aiRecipes.length === 0) {
+        showToast('AI 大厨暂时无法提供服务，请稍后重试');
+        return;
       }
+
+      // 新生成的菜谱置顶展示；同时移除列表中上一批 AI 菜谱，避免反复生成后越堆越多
+      setRecipes((prev) => [
+        ...aiRecipes,
+        ...prev.filter((r) => !r.id.startsWith('ai-recipe-')),
+      ]);
+
+      // 自动打开第一道，方便用户立刻查看食材与步骤
+      setSelectedRecipe(aiRecipes[0]);
+      setCookingTimer((aiRecipes[0].cook_time || 5) * 60);
+      setIsTimerRunning(false);
+
+      showToast(`AI 大厨已为你定制 ${aiRecipes.length} 道菜谱！`);
     } catch (err: any) {
       showToast(err.message || 'AI 菜谱定制失败，请稍后重试');
     } finally {
@@ -362,9 +416,9 @@ export default function ShikeApp() {
   };
 
   // Cook Recipe & Deduct
-  const handleCook = async (recipe: Recipe) => {
+  const handleCook = async (recipe: RecipeRecommendation) => {
     try {
-      const res = await cookRecipe(recipe.id, true);
+      await cookRecipe(recipe.id, true);
       setCookingMessage(`🎉 成功烹饪「${recipe.name}」，已自动扣减在库消耗食材！`);
       showToast(`已扣减「${recipe.name}」所用食材`);
       await refreshData();
@@ -400,7 +454,7 @@ export default function ShikeApp() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="/images/logo.png"
+              src="/images/logo.webp"
               alt="食刻 AI Logo"
               className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-200/60"
             />
@@ -432,10 +486,10 @@ export default function ShikeApp() {
               onClick={handleTriggerAiChef}
               disabled={isAiGenerating}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
-              title="根据冰箱现有食材呼叫大厨现场构思新菜"
+              title={`根据冰箱现有食材，让 AI 大厨现场设计 ${AI_RECIPE_COUNT} 道菜谱`}
             >
               <Sparkles className={`w-3.5 h-3.5 ${isAiGenerating ? 'animate-spin' : ''}`} />
-              <span>{isAiGenerating ? '大厨构思中...' : 'AI 现场定制菜谱'}</span>
+              <span>{isAiGenerating ? '生成中…' : 'AI 菜谱'}</span>
             </button>
 
             <button
@@ -542,7 +596,7 @@ export default function ShikeApp() {
         {/* TAB 1: RECIPES & INSPIRATION */}
         {activeTab === 'recipes' && (
           <div className="space-y-6">
-            <div className="flex items-end justify-between">
+            <div className="flex items-end justify-between gap-3">
               <div>
                 <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
                   今晚吃什么？
@@ -551,14 +605,66 @@ export default function ShikeApp() {
                   基于冰箱现有 {inventory.length} 种食材，智能优先消耗临期与高契合度菜谱
                 </p>
               </div>
-              <button
-                onClick={refreshData}
-                className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 py-1"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>刷新推荐</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={refreshData}
+                  className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 py-2"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span className="hidden sm:inline">刷新推荐</span>
+                </button>
+
+                {/* AI 菜谱按钮：点击后由大厨根据冰箱现有食材现场生成 3 道菜谱 */}
+                <button
+                  onClick={handleTriggerAiChef}
+                  disabled={isAiGenerating}
+                  title={`根据冰箱现有食材，让 AI 大厨现场设计 ${AI_RECIPE_COUNT} 道菜谱`}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 ${isAiGenerating ? 'animate-spin' : ''}`} />
+                  <span>{isAiGenerating ? '生成中…' : 'AI 菜谱'}</span>
+                </button>
+              </div>
             </div>
+
+            {/* 加载中提示 */}
+            {loadingRecipes && recipes.length === 0 && (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
+                <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-3" />
+                <span className="font-semibold text-sm text-slate-700">正在为你挑选合适的菜谱…</span>
+              </div>
+            )}
+
+            {/* 空状态提示 */}
+            {!loadingRecipes && recipes.length === 0 && (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
+                <ChefHat className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <span className="font-semibold text-sm text-slate-700">暂时没有可推荐的菜谱</span>
+                <p className="text-xs text-slate-400 mt-1">
+                  先拍一张冰箱照片或手动录入食材，之后可以点「AI 菜谱」让大厨现场设计
+                </p>
+              </div>
+            )}
+
+            {/* 库存有食材、但没有任何固定菜谱匹配得上时，引导用户使用 AI 定制 */}
+            {!loadingRecipes &&
+              inventory.length > 0 &&
+              recipes.length > 0 &&
+              recipes.every((r) => r.score === 0) && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center gap-2.5">
+                  <span className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <span className="font-semibold text-xs text-emerald-900">
+                      没有找到契合现有食材的固定菜谱
+                    </span>
+                    <p className="text-[11px] text-emerald-700/80">
+                      点击「AI 菜谱」按钮，让大厨按你现有的食材一次设计 {AI_RECIPE_COUNT} 道
+                    </p>
+                  </div>
+                </div>
+              )}
 
             {/* Recipe Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -576,11 +682,11 @@ export default function ShikeApp() {
                     {/* Visual & Badges */}
                     <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-slate-100 mb-3.5">
                       <img
-                        src={recipe.image_url || '/images/tomato_egg.png'}
+                        src={recipe.image_url || '/images/tomato_egg.webp'}
                         alt={recipe.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={(e: any) => {
-                          e.target.src = '/images/tomato_egg.png';
+                          e.target.src = '/images/tomato_egg.webp';
                         }}
                       />
                       {/* Match Rate Pill */}
@@ -589,10 +695,18 @@ export default function ShikeApp() {
                         <span>匹配率 {Math.round((recipe.match_rate || 0.8) * 100)}%</span>
                       </div>
 
-                      {recipe.urgency_boost > 0 && (
-                        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
-                          消耗临期
+                      {/* AI 生成的菜谱用专属徽章标识；固定菜谱则按需显示"消耗临期" */}
+                      {recipe.id.startsWith('ai-recipe-') ? (
+                        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          <span>AI 定制</span>
                         </div>
+                      ) : (
+                        recipe.urgency_boost > 0 && (
+                          <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                            消耗临期
+                          </div>
+                        )
                       )}
 
                       <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-[11px] text-white/90 font-medium">
@@ -847,7 +961,12 @@ export default function ShikeApp() {
             </div>
 
             {/* Inventory List */}
-            {filteredInventory.length === 0 ? (
+            {loadingInventory && inventory.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
+                <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-3" />
+                <span className="font-semibold text-sm text-slate-700">正在读取冰箱库存…</span>
+              </div>
+            ) : filteredInventory.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
                 <Refrigerator className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <span className="font-semibold text-sm text-slate-700">当前冰箱暂无食材</span>
@@ -934,7 +1053,7 @@ export default function ShikeApp() {
             {/* Modal Header */}
             <div className="relative aspect-[16/9] sm:aspect-[21/9] bg-slate-100">
               <img
-                src={selectedRecipe.image_url || '/images/tomato_egg.png'}
+                src={selectedRecipe.image_url || '/images/tomato_egg.webp'}
                 alt={selectedRecipe.name}
                 className="w-full h-full object-cover"
               />
@@ -1213,7 +1332,7 @@ export default function ShikeApp() {
                 <input
                   type="password"
                   required
-                  placeholder="至少4位密码"
+                  placeholder="至少6位密码"
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
                   className="w-full mt-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"

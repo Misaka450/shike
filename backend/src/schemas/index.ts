@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+/** 日期字符串统一校验为 YYYY-MM-DD，避免非法日期让保质期计算得出 NaN */
+const expiryDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式需为 YYYY-MM-DD（例如 2026-09-17）');
+
 export const ScannedItemSchema = z.object({
   name: z.string().min(1, '食材名称不能为空'),
   category: z.string().default('其他'),
@@ -53,13 +58,17 @@ export const CreateInventoryItemInputSchema = z.object({
   storage_location: z.string().optional().default('冷藏'),
   confidence: z.number().min(0).max(1).optional().default(1.0),
   storage_days: z.number().int().min(1).optional(),
-  expiry_date: z.string().optional(),
+  expiry_date: expiryDateSchema.optional(),
 });
 
 export type CreateInventoryItemInput = z.input<typeof CreateInventoryItemInputSchema>;
 
 export const BatchAddInventorySchema = z.object({
-  items: z.array(CreateInventoryItemInputSchema).min(1, '至少添加一件食材'),
+  // 限制单次批量写入条数，避免一个请求塞入海量数据拖垮服务
+  items: z
+    .array(CreateInventoryItemInputSchema)
+    .min(1, '至少添加一件食材')
+    .max(200, '单次最多添加 200 件食材'),
 });
 
 export type BatchAddInventory = z.infer<typeof BatchAddInventorySchema>;
@@ -71,7 +80,7 @@ export const UpdateInventoryItemSchema = z.object({
   unit: z.string().optional(),
   storage_location: z.string().optional(),
   storage_days: z.number().int().min(1).optional(),
-  expiry_date: z.string().optional(),
+  expiry_date: expiryDateSchema.optional(),
   status: InventoryItemStatusSchema.optional(),
 });
 
@@ -102,6 +111,24 @@ export const RecipeSchema = z.object({
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;
+
+/**
+ * AI 动态生成的菜谱结构
+ * 【修复 ARC-03】大模型的输出不可控，此前直接入库导致：
+ * 一旦模型返回 {"ingredients": "西红柿"}（字符串而非数组），前端渲染就会整页崩溃。
+ * 现在所有 AI 返回内容都必须先通过这份校验，不合格的直接丢弃。
+ */
+export const AiRecipeSchema = RecipeSchema.omit({ id: true, created_at: true });
+export type AiRecipe = z.infer<typeof AiRecipeSchema>;
+
+/**
+ * 一次生成多道 AI 菜谱时的返回结构
+ * 单次请求里让模型返回数组，比循环请求多次更省时间与额度。
+ */
+export const AiRecipeBatchSchema = z.object({
+  recipes: z.array(AiRecipeSchema).min(1).max(5),
+});
+export type AiRecipeBatch = z.infer<typeof AiRecipeBatchSchema>;
 
 export const MatchedIngredientDetailSchema = z.object({
   recipe_ingredient: z.string(),

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
-import crypto from 'node:crypto';
 import { db } from '../db/index.js';
+import type { AppEnv } from '../middleware/auth.js';
+import { extractToken, optionalAuth, requireAuth } from '../middleware/auth.js';
 import {
   createCaptcha,
   verifyAndConsumeCaptcha,
@@ -12,8 +13,29 @@ import {
   verifyPassword,
   dummyTimingCheck,
 } from '../services/authSecurity.js';
+import {
+  claimLegacyGuestData,
+  createSession,
+  destroySession,
+  generateUserId,
+} from '../services/sessionService.js';
 
-export const authRoute = new Hono();
+export const authRoute = new Hono<AppEnv>();
+
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100';
+
+/** 用户名合法性校验：2-32 字符，不含空白字符与控制字符（允许中英文） */
+function isValidUsername(name: string): boolean {
+  if (name.length < 2 || name.length > 32) return false;
+  return !/[\s\u0000-\u001f\u007f]/.test(name);
+}
+
+/** 昵称清洗：去除控制字符并限制长度，避免脏数据入库 */
+function sanitizeNickname(input: unknown, fallback: string): string {
+  if (typeof input !== 'string') return fallback;
+  const cleaned = input.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  return cleaned ? cleaned.slice(0, 32) : fallback;
+}
 
 // GET /captcha - 获取 SVG 验证码
 authRoute.get('/captcha', (c) => {
@@ -24,53 +46,119 @@ authRoute.get('/captcha', (c) => {
   });
 });
 
-// POST /register - 自定义用户名注册
-authRoute.post('/register', async (c) => {
+/**
+ * POST /guest - 创建访客会话
+ *
+ * 【安全修复 SEC-01】访客同样拥有由服务端签发的会话令牌，
+ * 客户端不再自己"发明"用户 ID，身份完全由服务端掌握。
+ * 请求体可选带 legacy_user_id：老版本前端在本地生成的用户 ID，
+ * 用于把该设备此前录入的食材一次性迁移到新会话下（详见 sessionService.claimLegacyGuestData）。
+ */
+authRoute.post('/guest', optionalAuth, async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const { username, password, nickname, captcha_key, captcha_code, temp_user_id } = body;
+  const legacyUserId =
+    typeof body?.legacy_user_id === 'string' ? body.legacy_user_id.trim() : '';
+
+  // 已持有有效访客会话时直接复用，避免同一台设备反复创建会话导致数据分裂
+  const existingUserId = c.get('userId');
+  const existingToken = extractToken(c);
+  if (existingUserId && existingUserId.startsWith('guest_') && existingToken) {
+    return c.json({
+      success: true,
+      data: {
+        user_id: existingUserId,
+        token: existingToken,
+        nickname: '临时访客',
+        avatar: DEFAULT_AVATAR,
+        is_guest: true,
+        migrated_legacy_data: false,
+      },
+    });
+  }
+
+  const guestId = generateUserId('guest');
+
+  // 尝试认领旧版客户端遗留的数据（仅允许访客 ID，且每份数据只能认领一次）
+  let migrated = false;
+  if (legacyUserId) {
+    migrated = claimLegacyGuestData(legacyUserId, guestId);
+  }
+
+  const session = createSession(guestId);
+
+  return c.json({
+    success: true,
+    data: {
+      user_id: guestId,
+      token: session.token,
+      expires_at: session.expiresAt,
+      nickname: '临时访客',
+      avatar: DEFAULT_AVATAR,
+      is_guest: true,
+      migrated_legacy_data: migrated,
+    },
+  });
+});
+
+// POST /register - 自定义用户名注册
+authRoute.post('/register', optionalAuth, async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const { username, password, nickname, captcha_key, captcha_code } = body;
 
   // 1. 验证码校验
   if (!captcha_key || !captcha_code || typeof captcha_code !== 'string') {
-    return c.json({ success: false, error: '请输入图形验证码' }, 400);
+    return c.json({ success: false, code: 'CAPTCHA_REQUIRED', error: '请输入图形验证码' }, 400);
   }
 
   const isCaptchaValid = verifyAndConsumeCaptcha(captcha_key, captcha_code);
   if (!isCaptchaValid) {
-    return c.json({ success: false, error: '验证码错误或已过期，请重新输入' }, 400);
+    return c.json({ success: false, code: 'CAPTCHA_INVALID', error: '验证码错误或已过期，请重新输入' }, 400);
   }
 
   // 2. 字段校验
-  if (!username || typeof username !== 'string' || username.trim().length < 2) {
-    return c.json({ success: false, error: '用户名至少需要2个字符' }, 400);
+  const cleanUser = typeof username === 'string' ? username.trim().toLowerCase() : '';
+  if (!isValidUsername(cleanUser)) {
+    return c.json(
+      { success: false, code: 'USERNAME_INVALID', error: '用户名需为 2-32 个字符，且不能包含空格' },
+      400
+    );
   }
-  if (!password || typeof password !== 'string' || password.length < 4) {
-    return c.json({ success: false, error: '密码至少需要4个字符' }, 400);
+  if (!password || typeof password !== 'string' || password.length < 6 || password.length > 128) {
+    return c.json(
+      { success: false, code: 'PASSWORD_WEAK', error: '密码长度需为 6-128 位' },
+      400
+    );
   }
 
-  const cleanUser = username.trim().toLowerCase();
   const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUser);
   if (existing) {
-    return c.json({ success: false, error: '该用户名已被注册，请直接登录' }, 409);
+    return c.json({ success: false, code: 'USERNAME_TAKEN', error: '该用户名已被注册，请直接登录' }, 409);
   }
 
-  const userId = `usr_${crypto.randomUUID().slice(0, 8)}`;
+  // 3. 创建账号（用户 ID 使用完整 UUID，不再截断）
+  const userId = generateUserId('usr');
   const passwordHash = hashPassword(password);
   const now = new Date().toISOString();
-  const userNick = (nickname && typeof nickname === 'string' && nickname.trim()) || username.trim();
-  const avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100';
+  const userNick = sanitizeNickname(nickname, cleanUser);
 
   db.prepare(`
     INSERT INTO users (id, username, password_hash, nickname, avatar, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(userId, cleanUser, passwordHash, userNick, avatar, now, now);
+  `).run(userId, cleanUser, passwordHash, userNick, DEFAULT_AVATAR, now, now);
 
-  // 如果客户端带了 temp_user_id（临时访客ID），将临时录入的食材迁移归属到新注册账号下
-  if (temp_user_id && typeof temp_user_id === 'string' && temp_user_id !== userId) {
-    db.prepare('UPDATE inventory_items SET user_id = ? WHERE user_id = ?').run(userId, temp_user_id);
-    db.prepare('UPDATE cooking_history SET user_id = ? WHERE user_id = ?').run(userId, temp_user_id);
+  // 4. 迁移当前访客会话名下的数据
+  // 【安全修复 SEC-02】身份取自服务端会话（客户端无法伪造），
+  // 彻底移除了此前"传入任意 temp_user_id 就能搬走别人数据"的漏洞。
+  const guestUserId = c.get('userId');
+  let migrated = false;
+  if (guestUserId && guestUserId.startsWith('guest_') && guestUserId !== userId) {
+    migrated = claimLegacyGuestData(guestUserId, userId);
   }
 
-  const token = `tok_${crypto.randomBytes(16).toString('hex')}`;
+  // 5. 旧访客令牌立即作废，签发正式账号会话
+  const oldToken = extractToken(c);
+  if (oldToken) destroySession(oldToken);
+  const session = createSession(userId);
 
   return c.json({
     success: true,
@@ -79,18 +167,20 @@ authRoute.post('/register', async (c) => {
       user_id: userId,
       username: cleanUser,
       nickname: userNick,
-      avatar,
-      token,
+      avatar: DEFAULT_AVATAR,
+      token: session.token,
+      expires_at: session.expiresAt,
       is_guest: false,
+      migrated_guest_data: migrated,
     },
   });
 });
 
 // POST /login - 账号密码登录
-authRoute.post('/login', async (c) => {
+authRoute.post('/login', optionalAuth, async (c) => {
   const ip = getClientIp(c);
   const body = await c.req.json().catch(() => ({}));
-  const { username, password, captcha_key, captcha_code, temp_user_id } = body;
+  const { username, password, captcha_key, captcha_code } = body;
 
   const cleanUser = typeof username === 'string' ? username.trim().toLowerCase() : '';
 
@@ -100,6 +190,7 @@ authRoute.post('/login', async (c) => {
     return c.json(
       {
         success: false,
+        code: 'ACCOUNT_LOCKED',
         error: `登录尝试次数过多，已被临时锁定，请在 ${lockout.remainingMinutes} 分钟后再试`,
         remaining_seconds: lockout.remainingSeconds,
       },
@@ -109,23 +200,25 @@ authRoute.post('/login', async (c) => {
 
   // 2. 基础输入校验
   if (!cleanUser || !password || typeof password !== 'string') {
-    return c.json({ success: false, error: '请输入用户名和密码' }, 400);
+    return c.json({ success: false, code: 'CREDENTIALS_REQUIRED', error: '请输入用户名和密码' }, 400);
   }
 
   // 3. 验证码校验
   if (!captcha_key || !captcha_code || typeof captcha_code !== 'string') {
-    return c.json({ success: false, error: '请输入图形验证码' }, 400);
+    return c.json({ success: false, code: 'CAPTCHA_REQUIRED', error: '请输入图形验证码' }, 400);
   }
 
   const isCaptchaValid = verifyAndConsumeCaptcha(captcha_key, captcha_code);
   if (!isCaptchaValid) {
-    return c.json({ success: false, error: '验证码错误或已过期，请重新输入' }, 400);
+    return c.json({ success: false, code: 'CAPTCHA_INVALID', error: '验证码错误或已过期，请重新输入' }, 400);
   }
 
   // 4. 用户查询及防枚举恒定时长密码校验
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(cleanUser) as any;
-  let passwordValid = false;
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(cleanUser) as
+    | { id: string; username: string; password_hash: string; nickname: string; avatar: string }
+    | undefined;
 
+  let passwordValid = false;
   if (user && user.password_hash) {
     passwordValid = verifyPassword(password, user.password_hash);
   } else {
@@ -139,13 +232,14 @@ authRoute.post('/login', async (c) => {
       return c.json(
         {
           success: false,
+          code: 'ACCOUNT_LOCKED',
           error: `登录尝试次数过多，已被临时锁定，请在 ${failLock.remainingMinutes} 分钟后再试`,
           remaining_seconds: failLock.remainingSeconds,
         },
         429
       );
     }
-    return c.json({ success: false, error: '用户名或密码错误' }, 401);
+    return c.json({ success: false, code: 'INVALID_CREDENTIALS', error: '用户名或密码错误' }, 401);
   }
 
   // 5. 登录成功：重置失败计数
@@ -157,13 +251,17 @@ authRoute.post('/login', async (c) => {
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(upgradedHash, user.id);
   }
 
-  // 迁移当前设备上的临时食材（如果有）
-  if (temp_user_id && typeof temp_user_id === 'string' && temp_user_id !== user.id) {
-    db.prepare('UPDATE inventory_items SET user_id = ? WHERE user_id = ?').run(user.id, temp_user_id);
-    db.prepare('UPDATE cooking_history SET user_id = ? WHERE user_id = ?').run(user.id, temp_user_id);
+  // 6. 迁移访客会话数据（身份来自服务端会话，客户端无法伪造）
+  const guestUserId = c.get('userId');
+  let migrated = false;
+  if (guestUserId && guestUserId.startsWith('guest_') && guestUserId !== user.id) {
+    migrated = claimLegacyGuestData(guestUserId, user.id);
   }
 
-  const token = `tok_${crypto.randomBytes(16).toString('hex')}`;
+  // 7. 销毁访客会话并签发正式账号会话
+  const oldToken = extractToken(c);
+  if (oldToken) destroySession(oldToken);
+  const session = createSession(user.id);
 
   return c.json({
     success: true,
@@ -172,50 +270,23 @@ authRoute.post('/login', async (c) => {
       user_id: user.id,
       username: user.username,
       nickname: user.nickname,
-      avatar: user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-      token,
+      avatar: user.avatar || DEFAULT_AVATAR,
+      token: session.token,
+      expires_at: session.expiresAt,
       is_guest: false,
+      migrated_guest_data: migrated,
     },
   });
 });
 
-// GET /guest - 生成临时访客
-authRoute.get('/guest', (c) => {
-  const guestId = `guest_${crypto.randomUUID().slice(0, 8)}`;
-  const token = `token_${crypto.randomBytes(16).toString('hex')}`;
-
-  return c.json({
-    success: true,
-    data: {
-      user_id: guestId,
-      token,
-      nickname: '临时访客',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-      is_guest: true,
-    },
-  });
-});
-
-authRoute.post('/guest', (c) => {
-  const guestId = `guest_${crypto.randomUUID().slice(0, 8)}`;
-  const token = `token_${crypto.randomBytes(16).toString('hex')}`;
-
-  return c.json({
-    success: true,
-    data: {
-      user_id: guestId,
-      token,
-      nickname: '临时访客',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-      is_guest: true,
-    },
-  });
-});
-
-// GET /me - 获取当前用户信息
-authRoute.get('/me', (c) => {
-  const userId = c.req.header('x-user-id') || 'guest';
-  const user = db.prepare('SELECT id, username, nickname, avatar FROM users WHERE id = ?').get(userId) as any;
+// GET /me - 获取当前登录用户信息（必须携带有效会话令牌）
+authRoute.get('/me', requireAuth, (c) => {
+  const userId = c.get('userId');
+  const user = db
+    .prepare('SELECT id, username, nickname, avatar FROM users WHERE id = ?')
+    .get(userId) as
+    | { id: string; username: string; nickname: string; avatar: string }
+    | undefined;
 
   if (user) {
     return c.json({
@@ -224,19 +295,29 @@ authRoute.get('/me', (c) => {
         user_id: user.id,
         username: user.username,
         nickname: user.nickname,
-        avatar: user.avatar,
+        avatar: user.avatar || DEFAULT_AVATAR,
         is_guest: false,
       },
     });
   }
 
+  // 访客会话：没有对应的账号记录
   return c.json({
     success: true,
     data: {
       user_id: userId,
-      nickname: userId.startsWith('guest_') || userId.startsWith('user_') ? '本地设备访客' : userId,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+      nickname: '临时访客',
+      avatar: DEFAULT_AVATAR,
       is_guest: true,
     },
   });
+});
+
+// POST /logout - 退出登录（服务端立即作废令牌，不再只是清空浏览器本地数据）
+authRoute.post('/logout', (c) => {
+  const token = extractToken(c);
+  if (token) {
+    destroySession(token);
+  }
+  return c.json({ success: true, message: '已退出登录' });
 });

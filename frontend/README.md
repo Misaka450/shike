@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 食刻 AI — 前端（Frontend）
 
-## Getting Started
+基于 **Next.js 14（App Router）** 的食刻 AI 前端应用，负责冰箱库存看板、拍照识别交互与菜谱浏览。
 
-First, run the development server:
+---
+
+## 本地开发
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # 默认 http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+后端需要同时运行在 `http://127.0.0.1:8081`（见 `../backend`）。
+若后端不在默认地址，请在 `.env.local` 中设置：
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+API_INTERNAL_URL=http://127.0.0.1:8081
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 常用脚本
 
-To learn more about Next.js, take a look at the following resources:
+| 命令 | 说明 |
+| --- | --- |
+| `npm run dev` | 启动开发服务器 |
+| `npm run build` | 生产构建（会执行 ESLint 与 TypeScript 类型检查） |
+| `npm start` | 以生产模式启动（需先 build） |
+| `npm run lint` | 单独执行 ESLint 检查 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 关键约定
 
-## Deploy on Vercel
+- **接口请求统一走 `src/lib/api.ts`**：该模块负责会话令牌的获取、携带与失效重试，页面组件不要直接调用 `fetch`。
+- **用户身份由服务端会话决定**：前端只持有令牌（`localStorage.shike_token`），不要自行生成或篡改用户 ID。
+- **类型定义集中在 `src/lib/types.ts`**：其中 `Recipe` 是基础结构，`RecipeRecommendation` 是带推荐评分的扩展结构，二者不要混用。
+- **`/api/*` 由 `next.config.mjs` 的 rewrites 转发到后端**：容器部署时必须通过 `API_INTERNAL_URL` 指向后端服务名。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 构建产物
+
+生产构建使用 Next.js 的 `standalone` 模式（见 `next.config.mjs`），
+产物位于 `.next/standalone`，Docker 镜像只需拷贝该目录即可运行，无需完整 `node_modules`。

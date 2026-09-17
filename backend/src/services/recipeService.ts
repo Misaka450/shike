@@ -1,5 +1,6 @@
 import { db } from '../db/index.js';
 import {
+  AiRecipeBatchSchema,
   CookRecipeRequest,
   InventoryItem,
   MatchedIngredientDetail,
@@ -11,65 +12,12 @@ import {
 import { markItemsAsConsumed } from './inventoryService.js';
 import { EXPANDED_RECIPES } from './expandedRecipes.js';
 import { config } from '../config.js';
+import { isIngredientMatch } from '../utils/ingredientMatch.js';
 
-// Synonyms dictionary for Chinese ingredients
-const SYNONYM_GROUPS: string[][] = [
-  ['西红柿', '番茄'],
-  ['土豆', '马铃薯', '洋芋'],
-  ['青椒', '尖椒', '辣椒', '菜椒', '彩椒', '杭椒'],
-  ['猪肉', '五花肉', '里脊肉', '猪里脊', '猪肉末', '肉丝', '瘦肉', '肉末', '肉丸', '猪肉馅'],
-  ['排骨', '小排', '肋排', '猪排骨', '肉排', '猪小排', '精排'],
-  ['牛肉', '牛腩', '肥牛', '牛肉末', '牛肉片', '牛排', '牛柳', '牛里脊'],
-  ['鸡肉', '鸡翅', '鸡中翅', '鸡腿', '鸡胸肉', '鸡块', '鸡丁'],
-  ['鱼肉', '鱼片', '鲜鱼', '鲈鱼', '草鱼', '鳕鱼', '龙利鱼', '巴沙鱼', '黑鱼', '鲫鱼'],
-  ['三文鱼', '三文鱼片', '大西洋鲑'],
-  ['虾', '大虾', '基围虾', '鲜虾', '虾仁', '青虾'],
-  ['蛤蜊', '花蛤', '扇贝', '花甲', '文蛤', '贝类', '蛤蜊肉'],
-  ['茄子', '长茄', '圆茄', '紫茄子', '紫茄', '长条茄子'],
-  ['菌菇', '香菇', '金针菇', '杏鲍菇', '平菇', '口蘑', '白玉菇', '海鲜菇', '蘑菇', '蟹味菇'],
-  ['绿叶蔬菜', '绿叶菜', '生菜', '油麦菜', '菠菜', '空心菜', '娃娃菜', '上海青', '青菜', '小油菜', '油菜'],
-  ['豆角', '四季豆', '扁豆', '豇豆', '架豆', '油豆角'],
-  ['蒜苔', '蒜薹', '蒜苗', '青蒜'],
-  ['洋葱', '紫洋葱', '圆葱', '洋葱碎', '白洋葱'],
-  ['豆腐', '嫩豆腐', '老豆腐', '内酯豆腐', '水豆腐'],
-  ['豆制品', '千张', '豆腐皮', '豆皮', '豆泡', '油豆腐', '腐竹', '豆干'],
-  ['香肠', '腊肠', '腊肉', '广味香肠', '川味香肠', '广式腊肠'],
-  ['米饭', '大米', '剩米饭', '冷饭', '白饭', '米粒', '白米饭'],
-  ['面条', '挂面', '鲜面', '拉面', '手擀面', '切面', '挂面条'],
-  ['皮蛋', '松花蛋', '变蛋'],
-  ['丝瓜', '水瓜'],
-  ['冬瓜'],
-  ['山药', '淮山', '铁棍山药'],
-  ['玉米', '甜玉米', '玉米粒', '水果玉米'],
-  ['香蕉', '熟香蕉'],
-  ['苹果', '红富士'],
-  ['面包', '吐司', '方包'],
-  ['酸奶', '优酪乳'],
-  ['牛奶', '纯牛奶', '鲜牛奶'],
-  ['葱', '大葱', '小葱', '香葱', '青葱', '葱花'],
-  ['姜', '生姜', '老姜', '姜丝', '姜末', '姜片'],
-  ['蒜', '大蒜', '蒜瓣', '蒜蓉', '蒜头'],
-  ['木耳', '黑木耳'],
-  ['黄瓜', '青瓜'],
-  ['胡萝卜', '红萝卜'],
-  ['白菜', '大白菜', '包菜', '圆白菜', '卷心菜'],
-];
+/** AI 动态生成的菜谱最多保留的条数，超出后自动清理最旧的（防止数据库无限膨胀） */
+const MAX_AI_RECIPES = 50;
 
-export function isIngredientMatch(invName: string, recName: string): boolean {
-  const iNorm = invName.trim().toLowerCase();
-  const rNorm = recName.trim().toLowerCase();
-
-  if (iNorm === rNorm) return true;
-  if (iNorm.includes(rNorm) || rNorm.includes(iNorm)) return true;
-
-  for (const group of SYNONYM_GROUPS) {
-    const iInGroup = group.some((g) => iNorm.includes(g) || g.includes(iNorm));
-    const rInGroup = group.some((g) => rNorm.includes(g) || g.includes(rNorm));
-    if (iInGroup && rInGroup) return true;
-  }
-
-  return false;
-}
+// 食材同义词判定已抽到 utils/ingredientMatch.ts，便于单独做单元测试
 
 export const DEFAULT_RECIPES: Recipe[] = [
   {
@@ -317,6 +265,39 @@ export function initSeedRecipes(): void {
 // Auto seed default and expanded recipes
 initSeedRecipes();
 
+/**
+ * 菜谱内存缓存（PER-02）
+ * 旧实现每次推荐都要把全部菜谱读出来并逐条 JSON.parse 解析食材与步骤，
+ * 随着菜谱数量增长，这个开销会线性放大。这里改为只在首次访问时解析一次。
+ */
+let recipeCache: Recipe[] | null = null;
+
+/** 菜谱数据发生变化（例如新增 AI 菜谱）时清空缓存，下次访问自动重建 */
+export function invalidateRecipeCache(): void {
+  recipeCache = null;
+}
+
+/** 读取全部菜谱（带缓存），仅在数据变更或首次访问时真正查询数据库 */
+function getAllRecipes(): Recipe[] {
+  if (!recipeCache) {
+    const rows = db.prepare('SELECT * FROM recipes ORDER BY name ASC').all();
+    recipeCache = rows.map(rowToRecipe);
+  }
+  return recipeCache;
+}
+
+/** 安全解析 JSON 字符串：数据损坏时回退到默认值，避免单个脏数据让整个接口报 500 */
+function safeJsonParse<T>(value: unknown, fallback: T): T {
+  if (typeof value !== 'string') {
+    return (value as T) ?? fallback;
+  }
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export function rowToRecipe(row: any): Recipe {
   return {
     id: row.id,
@@ -327,8 +308,8 @@ export function rowToRecipe(row: any): Recipe {
     prep_time: row.prep_time,
     cook_time: row.cook_time,
     servings: row.servings,
-    ingredients: typeof row.ingredients === 'string' ? JSON.parse(row.ingredients) : row.ingredients,
-    instructions: typeof row.instructions === 'string' ? JSON.parse(row.instructions) : row.instructions,
+    ingredients: safeJsonParse<RecipeIngredient[]>(row.ingredients, []),
+    instructions: safeJsonParse<string[]>(row.instructions, []),
     tips: row.tips || '',
     image_url: row.image_url || '',
     created_at: row.created_at,
@@ -336,21 +317,12 @@ export function rowToRecipe(row: any): Recipe {
 }
 
 export function listRecipes(filters?: { cuisine?: string; difficulty?: string }): Recipe[] {
-  let query = 'SELECT * FROM recipes WHERE 1=1';
-  const params: any[] = [];
-
-  if (filters?.cuisine) {
-    query += ' AND cuisine = ?';
-    params.push(filters.cuisine);
-  }
-  if (filters?.difficulty) {
-    query += ' AND difficulty = ?';
-    params.push(filters.difficulty);
-  }
-
-  query += ' ORDER BY name ASC';
-  const rows = db.prepare(query).all(...params);
-  return rows.map(rowToRecipe);
+  // 从内存缓存读取全量菜谱，过滤在内存中完成（菜谱数量有限，比每次重新查库 + JSON 解析更划算）
+  return getAllRecipes().filter((recipe) => {
+    if (filters?.cuisine && recipe.cuisine !== filters.cuisine) return false;
+    if (filters?.difficulty && recipe.difficulty !== filters.difficulty) return false;
+    return true;
+  });
 }
 
 export function getRecipeById(id: string): Recipe | null {
@@ -454,48 +426,62 @@ export function recommendRecipes(
 }
 
 /**
- * Call Local CPA LLM to dynamically generate a bespoke home recipe
- * based on user's active inventory items
+ * 调用本地 CPA 大模型，根据用户冰箱现有食材一次性设计多道菜谱
+ *
+ * 单次请求内让模型返回菜谱数组，比循环请求多次更省时间与额度。
+ *
+ * @param inventory  用户当前库存
+ * @param preference 口味偏好（可选）
+ * @param count      期望生成的菜谱数量，默认 3
+ * @returns 生成成功并已入库的菜谱列表；失败时返回空数组
  */
-export async function generateAiRecipe(
+export async function generateAiRecipes(
   inventory: InventoryItem[],
-  preference?: string
-): Promise<RecipeRecommendation | null> {
+  preference?: string,
+  count: number = 3
+): Promise<RecipeRecommendation[]> {
   const activeItems = inventory.filter((i) => i.status === 'active');
-  if (activeItems.length === 0) return null;
+  if (activeItems.length === 0) return [];
 
   const ingredientsListStr = activeItems
     .map((i) => `${i.name} (数量:${i.quantity}, 剩余保质期:${i.days_remaining ?? 3}天)`)
     .join('、');
 
   const systemPrompt = `你是一位精通家庭中西烹饪的高级行政总厨。
-根据用户冰箱中【实际现有的食材】，设计一道极具实操性、营养搭配合理的家庭菜谱。
+根据用户冰箱中【实际现有的食材】，设计 ${count} 道各具特色、实操性强、营养搭配合理的家庭菜谱。
 要求：
 1. 尽可能充分利用手头的食材，可允许使用普通家庭常备调料（油、盐、生抽、糖、黑胡椒等）。
-2. 必须以绝对纯净的 JSON 格式输出，不要输出任何 Markdown 格式或额外解释说明。
+2. 这 ${count} 道菜谱之间必须有明显区别：烹饪方式（炒/蒸/煮/炖/凉拌）、口味风格、菜系都不应重复。
+3. 必须优先消耗保质期告急的食材。
+4. 必须以绝对纯净的 JSON 格式输出，不要输出任何 Markdown 格式或额外解释说明。
 
-JSON 格式规范必须完全严格匹配以下字段：
+JSON 格式必须完全严格匹配以下结构：
 {
-  "name": "菜谱名称(如：香蕉燕麦三文鱼轻食碗)",
-  "category": "菜谱分类(家常菜/海鲜水产/轻食沙拉/快手早餐)",
-  "cuisine": "菜系风格(中餐/西餐轻食/创意融合)",
-  "difficulty": "简单/中等/困难",
-  "prep_time": 准备时间分钟数(数字),
-  "cook_time": 烹饪时间分钟数(数字),
-  "servings": 建议食用人数(数字),
-  "ingredients": [
-    {"name": "食材名", "amount": "分量", "required": true或false}
-  ],
-  "instructions": [
-    "第一步详细步骤...",
-    "第二步详细步骤..."
-  ],
-  "tips": "主厨贴心烹饪小技巧与保存建议"
-}`;
+  "recipes": [
+    {
+      "name": "菜谱名称(如：香蕉燕麦三文鱼轻食碗)",
+      "category": "菜谱分类(家常菜/海鲜水产/轻食沙拉/快手早餐)",
+      "cuisine": "菜系风格(中餐/西餐轻食/创意融合)",
+      "difficulty": "简单/中等/困难",
+      "prep_time": 准备时间分钟数(数字),
+      "cook_time": 烹饪时间分钟数(数字),
+      "servings": 建议食用人数(数字),
+      "ingredients": [
+        {"name": "食材名", "amount": "分量", "required": true或false}
+      ],
+      "instructions": [
+        "第一步详细步骤...",
+        "第二步详细步骤..."
+      ],
+      "tips": "主厨贴心烹饪小技巧与保存建议"
+    }
+  ]
+}
+recipes 数组必须正好包含 ${count} 个元素。`;
 
   const userPrompt = `用户现有冰箱食材：【${ingredientsListStr}】。
 ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''}
-请立即构思一道最适宜消耗现有食材（特别是保质期告急食材）的美味菜谱！`;
+请立即构思 ${count} 道最适宜消耗现有食材（特别是保质期告急食材）的美味菜谱！`;
 
   try {
     const response = await fetch(`${config.CPA_URL}/chat/completions`, {
@@ -510,92 +496,141 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.7,
+        // 一次要产出多道菜谱：适当提高温度增加差异度，并放宽输出长度上限
+        temperature: 0.8,
+        max_tokens: 4096,
       }),
+      // 【修复 PER-04】上游如果挂起，必须能主动放弃，否则请求会一直等待直到超时断开
+      signal: AbortSignal.timeout(config.CPA_TIMEOUT_MS),
     });
 
     if (!response.ok) {
-      console.error('[generateAiRecipe] CPA fetch failed:', response.statusText);
-      return null;
+      console.error('[generateAiRecipes] CPA fetch failed:', response.statusText);
+      return [];
     }
 
     const data: any = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
 
-    // Clean markdown code fence if present
+    // 去掉模型可能附带的 Markdown 代码围栏
     const cleanJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
-    const recipeData = JSON.parse(cleanJson);
+    const rawRecipeData = JSON.parse(cleanJson);
 
-    const recipeId = `ai-recipe-${Date.now()}`;
+    // 【修复 ARC-03】AI 返回内容必须先通过结构校验才能入库，
+    // 否则一个字段类型异常就会让前端渲染直接崩溃（整页白屏）。
+    // 这里顺带做结构归一化，兼容"模型只返回单个菜谱对象"或"直接返回数组"的意外情况。
+    const normalized = Array.isArray(rawRecipeData)
+      ? { recipes: rawRecipeData }
+      : rawRecipeData?.recipes
+        ? rawRecipeData
+        : { recipes: [rawRecipeData] };
+
+    const validated = AiRecipeBatchSchema.safeParse(normalized);
+    if (!validated.success) {
+      console.error('[generateAiRecipes] AI 返回结构不合法，已丢弃：', validated.error.issues);
+      return [];
+    }
+
     const now = new Date().toISOString();
+    const stamp = Date.now();
 
-    const newRecipe: Recipe = {
-      id: recipeId,
-      name: `✨ AI定制 · ${recipeData.name}`,
-      category: recipeData.category || '创意料理',
-      cuisine: recipeData.cuisine || '现代家庭料理',
-      difficulty: recipeData.difficulty || '简单',
-      prep_time: Number(recipeData.prep_time) || 5,
-      cook_time: Number(recipeData.cook_time) || 10,
-      servings: Number(recipeData.servings) || 1,
-      ingredients: recipeData.ingredients || [],
-      instructions: recipeData.instructions || [],
-      tips: recipeData.tips || 'AI主厨根据您冰箱现有食材量身定制。',
+    // 逐条补齐服务端负责的字段（唯一 id 与生成时间），并加上 AI 定制标识
+    const newRecipes: Recipe[] = validated.data.recipes.slice(0, count).map((item, index) => ({
+      id: `ai-recipe-${stamp}-${index + 1}`,
+      name: `✨ AI定制 · ${item.name}`,
+      category: item.category || '创意料理',
+      cuisine: item.cuisine || '现代家庭料理',
+      difficulty: item.difficulty || '简单',
+      prep_time: Number(item.prep_time) || 5,
+      cook_time: Number(item.cook_time) || 10,
+      servings: Number(item.servings) || 1,
+      ingredients: item.ingredients || [],
+      instructions: item.instructions || [],
+      tips: item.tips || 'AI主厨根据您冰箱现有食材量身定制。',
       image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
-    };
+      created_at: now,
+    }));
 
-    // Save AI recipe to database so it can be viewed and cooked!
-    db.prepare(`
+    const insertStmt = db.prepare(`
       INSERT OR REPLACE INTO recipes (
         id, name, category, cuisine, difficulty, prep_time, cook_time,
         servings, ingredients, instructions, tips, image_url, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      newRecipe.id,
-      newRecipe.name,
-      newRecipe.category,
-      newRecipe.cuisine,
-      newRecipe.difficulty,
-      newRecipe.prep_time,
-      newRecipe.cook_time,
-      newRecipe.servings,
-      JSON.stringify(newRecipe.ingredients),
-      JSON.stringify(newRecipe.instructions),
-      newRecipe.tips || '',
-      newRecipe.image_url || '',
-      now
-    );
+    `);
 
-    // Calculate match details
-    const matchedDetails: MatchedIngredientDetail[] = [];
-    const missingIngredients: RecipeIngredient[] = [];
-
-    for (const rIng of newRecipe.ingredients) {
-      const matched = activeItems.find((inv) => isIngredientMatch(inv.name, rIng.name));
-      if (matched) {
-        matchedDetails.push({
-          recipe_ingredient: rIng.name,
-          inventory_item_id: matched.id,
-          inventory_name: matched.name,
-          urgency_level: matched.urgency_level || 'green',
-          days_remaining: matched.days_remaining ?? 3,
-        });
-      } else {
-        missingIngredients.push(rIng);
+    // 写入新菜谱 + 清理旧 AI 菜谱放在同一个事务里，保证要么全部成功、要么全部回滚
+    db.transaction(() => {
+      for (const recipe of newRecipes) {
+        insertStmt.run(
+          recipe.id,
+          recipe.name,
+          recipe.category,
+          recipe.cuisine,
+          recipe.difficulty,
+          recipe.prep_time,
+          recipe.cook_time,
+          recipe.servings,
+          JSON.stringify(recipe.ingredients),
+          JSON.stringify(recipe.instructions),
+          recipe.tips || '',
+          recipe.image_url || '',
+          now
+        );
       }
-    }
 
-    return {
-      ...newRecipe,
-      score: 95.0, // High priority highlight
-      match_rate: 0.9,
-      matched_ingredients: matchedDetails,
-      missing_ingredients: missingIngredients,
-      urgency_boost: 25,
-    };
+      // 控制 AI 菜谱总量：只保留最近 N 条，避免每次生成都新增行导致数据库无限膨胀
+      db.prepare(`
+        DELETE FROM recipes
+        WHERE id LIKE 'ai-recipe-%'
+          AND id NOT IN (
+            SELECT id FROM recipes
+            WHERE id LIKE 'ai-recipe-%'
+            ORDER BY created_at DESC
+            LIMIT ?
+          )
+      `).run(MAX_AI_RECIPES);
+    })();
+
+    // 菜谱数据已变化，清空内存缓存，让后续请求读到最新的菜谱集合
+    invalidateRecipeCache();
+
+    // 计算每道菜谱与当前库存的匹配详情，供前端展示"已匹配 / 还需采购"标签
+    return newRecipes.map((recipe, index) => {
+      const matchedDetails: MatchedIngredientDetail[] = [];
+      const missingIngredients: RecipeIngredient[] = [];
+
+      for (const rIng of recipe.ingredients) {
+        const matched = activeItems.find((inv) => isIngredientMatch(inv.name, rIng.name));
+        if (matched) {
+          matchedDetails.push({
+            recipe_ingredient: rIng.name,
+            inventory_item_id: matched.id,
+            inventory_name: matched.name,
+            urgency_level: matched.urgency_level || 'green',
+            days_remaining: matched.days_remaining ?? 3,
+          });
+        } else {
+          missingIngredients.push(rIng);
+        }
+      }
+
+      return {
+        ...recipe,
+        // 依次递减，既保证 AI 菜谱整体排在固定菜谱之前，又让它们之间有稳定顺序
+        score: 95 - index,
+        // 匹配率按真实库存计算（旧实现硬编码为 0.9，展示的数字并不真实）
+        match_rate:
+          recipe.ingredients.length > 0
+            ? Math.round((matchedDetails.length / recipe.ingredients.length) * 100) / 100
+            : 0,
+        matched_ingredients: matchedDetails,
+        missing_ingredients: missingIngredients,
+        urgency_boost: 25,
+      };
+    });
   } catch (err: any) {
-    console.error('[generateAiRecipe] Exception:', err.message);
-    return null;
+    console.error('[generateAiRecipes] Exception:', err.message);
+    return [];
   }
 }
 
@@ -624,35 +659,44 @@ export function cookRecipe(
     }
   }
 
-  let consumedCount = 0;
-  if (options.auto_consume_ingredients && consumedItemIds.length > 0) {
-    consumedCount = markItemsAsConsumed(consumedItemIds, userId);
-  }
-
   const now = new Date().toISOString();
-  const historyInsert = db.prepare(`
-    INSERT INTO cooking_history (user_id, recipe_id, recipe_name, cooked_at, ingredients_used, notes)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
 
-  const result = historyInsert.run(
-    userId,
-    recipe.id,
-    recipe.name,
-    now,
-    JSON.stringify(usedIngredientsSummary),
-    options.notes || ''
-  );
+  // 【修复 ARC-10】扣减库存与写入烹饪历史必须原子完成：
+  // 旧实现分两步执行，中途一旦出错就会出现"食材被扣了、却没有烹饪记录"的数据不一致。
+  const runCookTransaction = db.transaction(() => {
+    let consumed = 0;
+    if (options.auto_consume_ingredients && consumedItemIds.length > 0) {
+      consumed = markItemsAsConsumed(consumedItemIds, userId);
+    }
+
+    const info = db
+      .prepare(`
+        INSERT INTO cooking_history (user_id, recipe_id, recipe_name, cooked_at, ingredients_used, notes)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        userId,
+        recipe.id,
+        recipe.name,
+        now,
+        JSON.stringify(usedIngredientsSummary),
+        options.notes || ''
+      );
+
+    return { consumed, historyId: Number(info.lastInsertRowid) };
+  });
+
+  const { consumed: consumedCount, historyId } = runCookTransaction();
 
   return {
     success: true,
-    historyId: Number(result.lastInsertRowid),
+    historyId,
     consumedCount,
     recipeName: recipe.name,
   };
 }
 
-export function getCookingHistory(userId: string = 'guest'): any[] {
+export function getCookingHistory(userId: string): any[] {
   const rows = db.prepare(`
     SELECT * FROM cooking_history
     WHERE user_id = ?
@@ -661,6 +705,6 @@ export function getCookingHistory(userId: string = 'guest'): any[] {
 
   return rows.map((r: any) => ({
     ...r,
-    ingredients_used: JSON.parse(r.ingredients_used || '[]'),
+    ingredients_used: safeJsonParse<string[]>(r.ingredients_used, []),
   }));
 }

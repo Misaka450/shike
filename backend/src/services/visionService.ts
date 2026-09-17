@@ -74,6 +74,8 @@ export async function callCpaVision(
       'Authorization': `Bearer ${config.CPA_API_KEY}`,
     },
     body: JSON.stringify(payload),
+    // 【修复 PER-04】给上游调用加超时，避免模型服务挂起时请求永久阻塞
+    signal: AbortSignal.timeout(config.CPA_TIMEOUT_MS),
   });
 
   if (!response.ok) {

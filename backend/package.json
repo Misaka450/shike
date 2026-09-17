@@ -2,17 +2,17 @@
   "name": "backend",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
+  "description": "食刻 AI 后端服务：食材库存管理、保质期预警、视觉识别与智能菜谱推荐",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx --test src/utils/__tests__/urgency.test.ts src/utils/__tests__/ingredientMatch.test.ts src/services/__tests__/aiRecipeGeneration.test.ts"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@hono/node-server": "^2.1.1",
     "better-sqlite3": "^13.0.3",

@@ -1,0 +1,18 @@
+# 构建上下文排除清单：减小上下文体积、加快构建、避免把敏感文件打进镜像
+node_modules
+.next
+out
+.git
+.gitignore
+*.log
+npm-debug.log*
+.env
+.env.*
+!.env.example
+data
+*.db
+*.db-wal
+*.db-shm
+README.md
+Dockerfile
+.dockerignore

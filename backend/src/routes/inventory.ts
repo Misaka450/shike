@@ -1,4 +1,6 @@
 import { Hono } from 'hono';
+import type { AppEnv } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 import {
   BatchAddInventorySchema,
   CreateInventoryItemInputSchema,
@@ -12,16 +14,18 @@ import {
   updateInventoryItem,
 } from '../services/inventoryService.js';
 
-export const inventoryRoute = new Hono();
+export const inventoryRoute = new Hono<AppEnv>();
 
-// Helper to extract user_id
-function getUserId(c: any): string {
-  return c.req.header('x-user-id') || c.req.query('user_id') || 'guest';
-}
+/**
+ * 【安全修复 SEC-01】整个路由组统一挂载鉴权中间件。
+ * 未携带有效会话令牌的请求，会在进入任何业务逻辑之前就被拦截返回 401，
+ * 用户身份一律由服务端会话决定，不再读取 x-user-id 请求头或 user_id 查询参数。
+ */
+inventoryRoute.use('*', requireAuth);
 
 // GET / - List all active inventory items with urgency calculations
 inventoryRoute.get('/', (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const items = listActiveInventory(userId);
 
   // Group by urgency summary
@@ -43,15 +47,15 @@ inventoryRoute.get('/', (c) => {
 
 // GET /:id - Get specific inventory item
 inventoryRoute.get('/:id', (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const id = Number(c.req.param('id'));
   if (isNaN(id)) {
-    return c.json({ success: false, error: '无效的 ID' }, 400);
+    return c.json({ success: false, code: 'INVALID_ID', error: '无效的 ID' }, 400);
   }
 
   const item = getInventoryItemById(id, userId);
   if (!item) {
-    return c.json({ success: false, error: '食材不存在' }, 404);
+    return c.json({ success: false, code: 'NOT_FOUND', error: '食材不存在' }, 404);
   }
 
   return c.json({ success: true, data: item });
@@ -59,7 +63,7 @@ inventoryRoute.get('/:id', (c) => {
 
 // POST /batch - Batch add inventory items
 inventoryRoute.post('/batch', async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const rawBody = await c.req.json().catch(() => ({}));
 
   // Handle both { items: [...] } and direct array [...]
@@ -70,6 +74,7 @@ inventoryRoute.post('/batch', async (c) => {
     return c.json(
       {
         success: false,
+        code: 'VALIDATION_FAILED',
         error: '参数验证失败',
         details: parsed.error.issues,
       },
@@ -87,12 +92,10 @@ inventoryRoute.post('/batch', async (c) => {
       },
       201
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
+    console.error('[POST /inventory/batch] 批量添加食材失败：', err);
     return c.json(
-      {
-        success: false,
-        error: err.message || '批量添加食材失败',
-      },
+      { success: false, code: 'BATCH_ADD_FAILED', error: '批量添加食材失败，请稍后重试' },
       500
     );
   }
@@ -100,7 +103,7 @@ inventoryRoute.post('/batch', async (c) => {
 
 // POST / - Add single item
 inventoryRoute.post('/', async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const rawBody = await c.req.json().catch(() => ({}));
   const parsed = CreateInventoryItemInputSchema.safeParse(rawBody);
 
@@ -108,6 +111,7 @@ inventoryRoute.post('/', async (c) => {
     return c.json(
       {
         success: false,
+        code: 'VALIDATION_FAILED',
         error: '参数验证失败',
         details: parsed.error.issues,
       },
@@ -124,12 +128,10 @@ inventoryRoute.post('/', async (c) => {
       },
       201
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
+    console.error('[POST /inventory] 添加食材失败：', err);
     return c.json(
-      {
-        success: false,
-        error: err.message || '添加食材失败',
-      },
+      { success: false, code: 'ADD_FAILED', error: '添加食材失败，请稍后重试' },
       500
     );
   }
@@ -137,10 +139,10 @@ inventoryRoute.post('/', async (c) => {
 
 // PATCH /:id - Update inventory item
 inventoryRoute.patch('/:id', async (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const id = Number(c.req.param('id'));
   if (isNaN(id)) {
-    return c.json({ success: false, error: '无效的 ID' }, 400);
+    return c.json({ success: false, code: 'INVALID_ID', error: '无效的 ID' }, 400);
   }
 
   const rawBody = await c.req.json().catch(() => ({}));
@@ -150,6 +152,7 @@ inventoryRoute.patch('/:id', async (c) => {
     return c.json(
       {
         success: false,
+        code: 'VALIDATION_FAILED',
         error: '参数验证失败',
         details: parsed.error.issues,
       },
@@ -159,7 +162,7 @@ inventoryRoute.patch('/:id', async (c) => {
 
   const updated = updateInventoryItem(id, parsed.data, userId);
   if (!updated) {
-    return c.json({ success: false, error: '食材不存在或无权限更新' }, 404);
+    return c.json({ success: false, code: 'NOT_FOUND', error: '食材不存在或无权限更新' }, 404);
   }
 
   return c.json({
@@ -170,15 +173,15 @@ inventoryRoute.patch('/:id', async (c) => {
 
 // DELETE /:id - Delete inventory item
 inventoryRoute.delete('/:id', (c) => {
-  const userId = getUserId(c);
+  const userId = c.get('userId');
   const id = Number(c.req.param('id'));
   if (isNaN(id)) {
-    return c.json({ success: false, error: '无效的 ID' }, 400);
+    return c.json({ success: false, code: 'INVALID_ID', error: '无效的 ID' }, 400);
   }
 
   const deleted = deleteInventoryItem(id, userId);
   if (!deleted) {
-    return c.json({ success: false, error: '食材未找到或已删除' }, 404);
+    return c.json({ success: false, code: 'NOT_FOUND', error: '食材未找到或已删除' }, 404);
   }
 
   return c.json({

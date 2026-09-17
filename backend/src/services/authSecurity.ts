@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import type { Context } from 'hono';
+import { config } from '../config.js';
 
 // --- Captcha Generator & Store ---
 
@@ -9,6 +10,11 @@ interface CaptchaEntry {
 }
 
 const captchaStore = new Map<string, CaptchaEntry>();
+
+/** 生成 [min, max] 闭区间内的密码学安全随机整数（安全场景不可使用 Math.random） */
+function secureRandomInt(min: number, max: number): number {
+  return crypto.randomInt(min, max + 1);
+}
 
 // Clean up expired captchas periodically
 const captchaCleanupInterval = setInterval(() => {
@@ -22,9 +28,9 @@ const captchaCleanupInterval = setInterval(() => {
 captchaCleanupInterval.unref();
 
 export function createCaptcha(): { captcha_key: string; svg: string } {
-  const isPlus = Math.random() > 0.35;
-  let a = Math.floor(Math.random() * 12) + 1;
-  let b = Math.floor(Math.random() * 9) + 1;
+  const isPlus = secureRandomInt(0, 99) >= 35;
+  let a = secureRandomInt(1, 12);
+  let b = secureRandomInt(1, 9);
   let answer: string;
   let expression: string;
 
@@ -44,21 +50,21 @@ export function createCaptcha(): { captcha_key: string; svg: string } {
   const palette = ['#10b981', '#64748b', '#0ea5e9', '#f59e0b', '#8b5cf6', '#ec4899'];
   let lines = '';
   for (let i = 0; i < 4; i++) {
-    const x1 = Math.floor(Math.random() * width);
-    const y1 = Math.floor(Math.random() * height);
-    const x2 = Math.floor(Math.random() * width);
-    const y2 = Math.floor(Math.random() * height);
-    const color = palette[Math.floor(Math.random() * palette.length)];
+    const x1 = secureRandomInt(0, width);
+    const y1 = secureRandomInt(0, height);
+    const x2 = secureRandomInt(0, width);
+    const y2 = secureRandomInt(0, height);
+    const color = palette[secureRandomInt(0, palette.length - 1)];
     lines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1.5" opacity="0.45" stroke-linecap="round"/>`;
   }
 
   // Generate noise dots
   let dots = '';
   for (let i = 0; i < 18; i++) {
-    const cx = Math.floor(Math.random() * width);
-    const cy = Math.floor(Math.random() * height);
-    const r = (Math.random() * 1.5 + 0.8).toFixed(1);
-    const color = palette[Math.floor(Math.random() * palette.length)];
+    const cx = secureRandomInt(0, width);
+    const cy = secureRandomInt(0, height);
+    const r = (secureRandomInt(8, 15) / 10).toFixed(1);
+    const color = palette[secureRandomInt(0, palette.length - 1)];
     dots += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" opacity="0.35"/>`;
   }
 
@@ -69,8 +75,8 @@ export function createCaptcha(): { captcha_key: string; svg: string } {
   for (let i = 0; i < expression.length; i++) {
     const char = expression[i];
     const x = startX + i * stepX;
-    const y = 25 + (Math.random() * 4 - 2);
-    const rot = (Math.random() * 14 - 7).toFixed(1);
+    const y = 25 + secureRandomInt(-2, 2);
+    const rot = (secureRandomInt(-70, 70) / 10).toFixed(1);
     const charColor = ['#0f172a', '#047857', '#0369a1', '#b45309', '#4338ca'][i % 5];
     charsSvg += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="monospace, Arial, sans-serif" font-weight="700" font-size="18" fill="${charColor}" transform="rotate(${rot}, ${x.toFixed(1)}, ${y.toFixed(1)})">${char}</text>`;
   }
@@ -107,6 +113,37 @@ export function verifyAndConsumeCaptcha(key?: string, code?: string): boolean {
   return code.trim().toLowerCase() === entry.code.toLowerCase();
 }
 
+// --- Generic Rate Limiter (used by AI-heavy endpoints) ---
+
+/** 限流桶：key -> 该 key 最近的请求时间戳列表 */
+const rateLimitBuckets = new Map<string, number[]>();
+
+/**
+ * 通用滑动窗口限流
+ * @param key        限流维度标识（例如 `vision:${ip}`）
+ * @param maxRequests 窗口内允许的最大请求数
+ * @param windowMs    窗口长度（毫秒）
+ * @returns allowed 是否放行；retryAfterSeconds 被拦截时建议等待的秒数
+ */
+export function checkRateLimit(
+  key: string,
+  maxRequests: number,
+  windowMs: number
+): { allowed: boolean; retryAfterSeconds: number } {
+  const now = Date.now();
+  const timestamps = (rateLimitBuckets.get(key) || []).filter((t) => now - t < windowMs);
+
+  if (timestamps.length >= maxRequests) {
+    rateLimitBuckets.set(key, timestamps);
+    const retryAfterSeconds = Math.max(1, Math.ceil((timestamps[0] + windowMs - now) / 1000));
+    return { allowed: false, retryAfterSeconds };
+  }
+
+  timestamps.push(now);
+  rateLimitBuckets.set(key, timestamps);
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
 // --- Rate Limiting & Brute-force Lockout ---
 
 interface LockoutRecord {
@@ -124,6 +161,8 @@ const MAX_FAILED_ATTEMPTS = 5;
 // Clean up stale lockout records periodically
 const rateLimitCleanupInterval = setInterval(() => {
   const now = Date.now();
+
+  // 清理登录锁定记录
   for (const [key, item] of ipLockouts.entries()) {
     if (item.lockedUntil < now && item.attempts.every((t) => now - t > ATTEMPT_WINDOW_MS)) {
       ipLockouts.delete(key);
@@ -132,6 +171,16 @@ const rateLimitCleanupInterval = setInterval(() => {
   for (const [key, item] of userLockouts.entries()) {
     if (item.lockedUntil < now && item.attempts.every((t) => now - t > ATTEMPT_WINDOW_MS)) {
       userLockouts.delete(key);
+    }
+  }
+
+  // 清理通用限流桶中已经全部过期的记录，避免内存无限增长
+  for (const [key, timestamps] of rateLimitBuckets.entries()) {
+    const alive = timestamps.filter((t) => now - t < 60 * 60 * 1000);
+    if (alive.length === 0) {
+      rateLimitBuckets.delete(key);
+    } else if (alive.length !== timestamps.length) {
+      rateLimitBuckets.set(key, alive);
     }
   }
 }, 60 * 1000);
@@ -199,22 +248,31 @@ export function resetLoginFailures(ip: string, username?: string): void {
   }
 }
 
+/**
+ * 获取客户端真实 IP
+ *
+ * 【安全修复 SEC-06】旧实现无条件信任 X-Forwarded-For 请求头，
+ * 攻击者只要每次请求携带不同的伪造 IP，就能绕开"5 次失败即锁定"的防护，无限次暴力破解密码。
+ * 现在改为：只有在明确配置了可信反向代理（TRUST_PROXY=true）时才采信该头，
+ * 否则一律使用 TCP 连接的真实来源地址，客户端无法伪造。
+ */
 export function getClientIp(c: Context): string {
-  const forwarded = c.req.header('x-forwarded-for');
-  if (forwarded) {
-    const first = forwarded.split(',')[0].trim();
-    if (first) return first;
+  if (config.TRUST_PROXY) {
+    const forwarded = c.req.header('x-forwarded-for');
+    if (forwarded) {
+      const first = forwarded.split(',')[0].trim();
+      if (first) return first;
+    }
+    const realIp = c.req.header('x-real-ip');
+    if (realIp && realIp.trim()) {
+      return realIp.trim();
+    }
   }
-  const realIp = c.req.header('x-real-ip');
-  if (realIp && realIp.trim()) {
-    return realIp.trim();
-  }
-  // @ts-ignore
-  const socketIp = c.env?.incoming?.socket?.remoteAddress;
-  if (socketIp) {
-    return socketIp;
-  }
-  return '127.0.0.1';
+
+  // 直连场景：取 Node 底层 socket 的对端地址，这是无法被请求头伪造的
+  const socketIp = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)
+    ?.incoming?.socket?.remoteAddress;
+  return socketIp || 'unknown';
 }
 
 // --- Password Hashing & Timing-safe Verification ---

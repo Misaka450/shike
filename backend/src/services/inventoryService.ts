@@ -3,31 +3,9 @@ import {
   CreateInventoryItemInput,
   InventoryItem,
   UpdateInventoryItem,
-  UrgencyLevel,
 } from '../schemas/index.js';
-
-export function calculateDaysRemaining(expiryDateStr: string): number {
-  const now = new Date();
-  // Normalize now to start of day
-  const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  const expDateObj = new Date(expiryDateStr);
-  const expDate = new Date(expDateObj.getFullYear(), expDateObj.getMonth(), expDateObj.getDate());
-  
-  const diffTime = expDate.getTime() - nowDate.getTime();
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
-}
-
-export function computeUrgency(daysRemaining: number): UrgencyLevel {
-  // green (>3 days), amber/yellow (1-2 days, or up to 3 days), red (expired <= 0 days)
-  if (daysRemaining <= 0) {
-    return 'red';
-  }
-  if (daysRemaining <= 2) {
-    return 'yellow';
-  }
-  return 'green';
-}
+// 保质期相关计算已抽到 utils 下，方便单独做单元测试（不需要连数据库）
+import { calculateDaysRemaining, computeUrgency } from '../utils/urgency.js';
 
 function rowToInventoryItem(row: any): InventoryItem {
   const daysRemaining = calculateDaysRemaining(row.expiry_date);
@@ -52,7 +30,7 @@ function rowToInventoryItem(row: any): InventoryItem {
   };
 }
 
-export function listActiveInventory(userId: string = 'guest'): InventoryItem[] {
+export function listActiveInventory(userId: string): InventoryItem[] {
   const stmt = db.prepare(`
     SELECT * FROM inventory_items
     WHERE user_id = ? AND status = 'active'
@@ -62,7 +40,7 @@ export function listActiveInventory(userId: string = 'guest'): InventoryItem[] {
   return rows.map(rowToInventoryItem);
 }
 
-export function getInventoryItemById(id: number, userId: string = 'guest'): InventoryItem | null {
+export function getInventoryItemById(id: number, userId: string): InventoryItem | null {
   const stmt = db.prepare(`
     SELECT * FROM inventory_items
     WHERE id = ? AND user_id = ?
@@ -73,7 +51,7 @@ export function getInventoryItemById(id: number, userId: string = 'guest'): Inve
 
 export function batchAddInventory(
   items: CreateInventoryItemInput[],
-  userId: string = 'guest'
+  userId: string
 ): InventoryItem[] {
   const now = new Date();
   const addedAt = now.toISOString();
@@ -133,7 +111,7 @@ export function batchAddInventory(
 export function updateInventoryItem(
   id: number,
   data: UpdateInventoryItem,
-  userId: string = 'guest'
+  userId: string
 ): InventoryItem | null {
   const existing = getInventoryItemById(id, userId);
   if (!existing) return null;
@@ -187,7 +165,7 @@ export function updateInventoryItem(
   return getInventoryItemById(id, userId);
 }
 
-export function deleteInventoryItem(id: number, userId: string = 'guest'): boolean {
+export function deleteInventoryItem(id: number, userId: string): boolean {
   const stmt = db.prepare(`
     DELETE FROM inventory_items
     WHERE id = ? AND user_id = ?
@@ -196,7 +174,7 @@ export function deleteInventoryItem(id: number, userId: string = 'guest'): boole
   return result.changes > 0;
 }
 
-export function markItemsAsConsumed(itemIds: number[], userId: string = 'guest'): number {
+export function markItemsAsConsumed(itemIds: number[], userId: string): number {
   if (itemIds.length === 0) return 0;
   const now = new Date().toISOString();
   const placeholders = itemIds.map(() => '?').join(',');
