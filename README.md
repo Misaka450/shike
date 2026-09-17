@@ -29,7 +29,6 @@
 .
 ├── backend/            # 后端服务源码 (API、数据库交互、AI视觉与菜谱服务)
 ├── frontend/           # 前端应用源码 (Next.js 页面与交互组件)
-├── stitch-ui/          # 交互设计稿与高保真原型素材
 ├── docker-compose.yml  # Docker Compose 服务编排配置
 ├── .env.example        # 环境变量示例文件
 └── README.md
