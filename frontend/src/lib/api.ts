@@ -336,5 +336,11 @@ export async function cookRecipe(
   });
 }
 
+export async function deleteRecipe(recipeId: string): Promise<void> {
+  await request<{ success: boolean; message?: string }>(`/api/recipes/${recipeId}`, {
+    method: 'DELETE',
+  });
+}
+
 /** 请求最大图片体积（用于前端提前拦截超大文件，与后端保持一致） */
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;

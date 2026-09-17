@@ -21,6 +21,10 @@ import {
   User,
   LogOut,
   RefreshCw,
+  Heart,
+  ExternalLink,
+  BookOpen,
+  Trash2,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -36,6 +40,7 @@ import {
   getRecommendations,
   generateAiRecipes,
   cookRecipe,
+  deleteRecipe,
   getCurrentUser,
   loginUser,
   registerUser,
@@ -431,6 +436,26 @@ export default function ShikeApp() {
     }
   };
 
+  // Delete AI Recipe
+  const handleDeleteRecipe = async (recipeId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    if (!window.confirm('确定要删除这道 AI 定制菜谱吗？')) {
+      return;
+    }
+    try {
+      await deleteRecipe(recipeId);
+      setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
+      if (selectedRecipe && selectedRecipe.id === recipeId) {
+        setSelectedRecipe(null);
+      }
+      showToast('已删除该 AI 菜谱');
+    } catch (err: any) {
+      showToast(err.message || '删除菜谱失败，请稍后重试');
+    }
+  };
+
   // Filter Inventory
   const filteredInventory = inventory.filter((item) => {
     if (selectedLocation === 'all') return true;
@@ -450,18 +475,18 @@ export default function ShikeApp() {
       )}
 
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-3.5">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-4 lg:px-8 py-2.5 sm:py-3.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <img
               src="/images/logo.webp"
               alt="食刻 AI Logo"
-              className="w-10 h-10 rounded-xl object-cover shadow-sm border border-slate-200/60"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover shadow-sm border border-slate-200/60 shrink-0"
             />
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight text-slate-900">食刻 AI</span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-bold text-sm sm:text-base tracking-tight text-slate-900">食刻 AI</span>
+                <span className="text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                   智能冰箱管家
                 </span>
               </div>
@@ -470,7 +495,7 @@ export default function ShikeApp() {
           </div>
 
           {/* KPI Capsule & Action */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-xs font-medium text-slate-600">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span>在库 {summary.total} 种</span>
@@ -485,7 +510,7 @@ export default function ShikeApp() {
             <button
               onClick={handleTriggerAiChef}
               disabled={isAiGenerating}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-xs font-semibold shadow-sm shadow-amber-500/10 transition-all active:scale-95"
               title={`根据冰箱现有食材，让 AI 大厨现场设计 ${AI_RECIPE_COUNT} 道菜谱`}
             >
               <Sparkles className={`w-3.5 h-3.5 ${isAiGenerating ? 'animate-spin' : ''}`} />
@@ -494,7 +519,7 @@ export default function ShikeApp() {
 
             <button
               onClick={() => setActiveTab('scan')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
             >
               <Camera className="w-3.5 h-3.5" />
               <span>拍冰箱入库</span>
@@ -507,19 +532,20 @@ export default function ShikeApp() {
                   setAuthMode('login');
                   setShowAuthModal(true);
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all active:scale-95 border border-slate-200"
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all active:scale-95 border border-slate-200"
                 title="登录后可跨电脑、手机实时同步冰箱数据"
               >
                 <User className="w-3.5 h-3.5 text-slate-500" />
-                <span>登录 / 多端同步</span>
+                <span className="sm:hidden">登录</span>
+                <span className="hidden sm:inline">登录 / 多端同步</span>
               </button>
             ) : (
-              <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>{userProfile.nickname || userProfile.username}</span>
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 sm:px-2.5 py-1 rounded-full text-xs font-medium">
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                <span className="truncate max-w-[70px] sm:max-w-none">{userProfile.nickname || userProfile.username}</span>
                 <button
                   onClick={handleLogout}
-                  className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
+                  className="ml-0.5 sm:ml-1 text-slate-400 hover:text-red-500 transition-colors shrink-0"
                   title="退出登录"
                 >
                   <LogOut className="w-3 h-3" />
@@ -697,9 +723,19 @@ export default function ShikeApp() {
 
                       {/* AI 生成的菜谱用专属徽章标识；固定菜谱则按需显示"消耗临期" */}
                       {recipe.id.startsWith('ai-recipe-') ? (
-                        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
-                          <Sparkles className="w-2.5 h-2.5" />
-                          <span>AI 定制</span>
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
+                          <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>AI 定制</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteRecipe(recipe.id, e)}
+                            title="删除 AI 菜谱"
+                            className="w-5 h-5 rounded-full bg-black/40 hover:bg-rose-500 text-white/80 hover:text-white backdrop-blur-md transition-all shadow-sm flex items-center justify-center hover:scale-110 active:scale-95"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
                         </div>
                       ) : (
                         recipe.urgency_boost > 0 && (
@@ -1044,6 +1080,74 @@ export default function ShikeApp() {
             )}
           </div>
         )}
+
+        {/* FOOTER 致谢区块 (食刻清新自然风) */}
+        <footer className="mt-16 sm:mt-20 pt-8 pb-28 lg:pb-10 border-t border-emerald-100/60 text-center select-none">
+          {/* 生态胶囊徽章 */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold mb-2.5 shadow-xs">
+            <span className="text-xs">🌱</span>
+            <span>开源生态致谢</span>
+          </div>
+
+          <p className="text-xs text-slate-500 max-w-md mx-auto mb-5 leading-relaxed">
+            食刻 AI 的菜谱灵感、量化下厨步骤与经典家常风味建立在开源社区的贡献之上
+          </p>
+
+          {/* 双列自适应轻量卡片 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-3xl mx-auto text-left">
+            {/* 卡片 1: HowToCook 程序员做饭指南 */}
+            <a
+              href="https://github.com/Anduin2017/HowToCook"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-4 rounded-2xl bg-white/90 hover:bg-white border border-slate-200/80 hover:border-emerald-300 shadow-sm hover:shadow-md hover:shadow-emerald-500/5 transition-all duration-200 flex items-center justify-between gap-3 backdrop-blur-sm"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 group-hover:bg-emerald-100/80 transition-all duration-200">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                    <h4 className="text-xs font-semibold text-slate-800 group-hover:text-emerald-700 transition-colors truncate">
+                      HowToCook 程序员做饭指南
+                    </h4>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5 truncate pl-3">
+                    严谨量化的中餐开源菜谱
+                  </p>
+                </div>
+              </div>
+              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
+            </a>
+
+            {/* 卡片 2: 下厨房开源语料库 */}
+            <a
+              href="https://counterfactual-recipe-generation.github.io/dataset_en.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-4 rounded-2xl bg-white/90 hover:bg-white border border-slate-200/80 hover:border-amber-300 shadow-sm hover:shadow-md hover:shadow-amber-500/5 transition-all duration-200 flex items-center justify-between gap-3 backdrop-blur-sm"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 group-hover:scale-105 group-hover:bg-amber-100/80 transition-all duration-200">
+                  <Utensils className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                    <h4 className="text-xs font-semibold text-slate-800 group-hover:text-amber-700 transition-colors truncate">
+                      下厨房开源语料库
+                    </h4>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5 truncate pl-3">
+                    经典中式家常风味数据
+                  </p>
+                </div>
+              </div>
+              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
+            </a>
+          </div>
+        </footer>
       </main>
 
       {/* COOKING WALKTHROUGH DRAWER / MODAL */}
@@ -1153,10 +1257,20 @@ export default function ShikeApp() {
             </div>
 
             {/* Modal Bottom Action */}
-            <div className="p-4 border-t border-slate-100 bg-white">
+            <div className="p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row gap-2.5">
+              {selectedRecipe.id.startsWith('ai-recipe-') && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRecipe(selectedRecipe.id)}
+                  className="py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-semibold text-xs sm:text-sm border border-rose-200/80 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-500" />
+                  <span>删除此 AI 菜谱</span>
+                </button>
+              )}
               <button
                 onClick={() => handleCook(selectedRecipe)}
-                className="w-full py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                className="flex-1 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
               >
                 <Utensils className="w-4 h-4 text-emerald-400" />
                 <span>完成下厨 · 自动同步扣减食材库存</span>

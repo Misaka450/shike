@@ -195,3 +195,18 @@ A：把 `.env` 中的 `DB_PATH` 改为相对路径，例如 `./data/db/shike.db`
 ## 📄 开源许可
 
 本项目遵循 MIT 协议，详见 [LICENSE](./LICENSE)。
+
+---
+
+## 💖 鸣谢与数据来源
+
+食刻 AI 的智能菜谱推荐、量化烹饪指南与经典风味数据离不开开源社区的积淀与无私奉献。在此特别鸣谢以下优秀开源项目与数据集：
+
+- **[HowToCook 程序员做饭指南](https://github.com/Anduin2017/HowToCook)**
+  - **项目链接**：[https://github.com/Anduin2017/HowToCook](https://github.com/Anduin2017/HowToCook)
+  - **用途致谢**：提供了严谨、精确量化、易于工程化执行的中餐菜谱结构与烹饪指导逻辑。食刻 AI 在菜谱预设、步骤规范化与烹饪计时交互设计上深度参考了其严谨量化的中餐开源菜谱理念。
+- **[XiaChuFang Recipe Corpus 下厨房开源语料库](https://counterfactual-recipe-generation.github.io/dataset_en.html)**
+  - **项目链接**：[https://counterfactual-recipe-generation.github.io/dataset_en.html](https://counterfactual-recipe-generation.github.io/dataset_en.html)
+  - **用途致谢**：提供了丰富经典的中式家常风味数据与食材搭配语料。食刻 AI 的本地食材匹配打分算法、食材同义词映射库以及 AI 菜谱定制生成提示词，汲取了该语料库关于经典中式家常风味搭配关系的深厚积累。
+
+致敬所有开源创作者对中餐烹饪数字化与知识共享的卓越贡献！

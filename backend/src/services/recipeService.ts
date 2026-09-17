@@ -13,6 +13,7 @@ import { markItemsAsConsumed } from './inventoryService.js';
 import { EXPANDED_RECIPES } from './expandedRecipes.js';
 import { config } from '../config.js';
 import { isIngredientMatch } from '../utils/ingredientMatch.js';
+import { selectRecipeImage } from '../utils/recipeImage.js';
 
 /** AI 动态生成的菜谱最多保留的条数，超出后自动清理最旧的（防止数据库无限膨胀） */
 const MAX_AI_RECIPES = 50;
@@ -43,7 +44,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '加少许糖调味，倒回炒好的鸡蛋翻炒均匀即可出锅。',
     ],
     tips: '西红柿炒出沙汁是好吃的秘诀，加少许白糖可中和番茄酸味。',
-    image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
+    image_url: '/images/tomato_egg.webp',
   },
   {
     id: 'recipe-cucumber-salad',
@@ -120,7 +121,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '加入蒜片、生抽、老抽翻炒上色，倒回青椒大火炒匀出锅。',
     ],
     tips: '先干煸青椒逼出椒香，五花肉逼出多余油脂就不会腻。',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+    image_url: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=500',
   },
   {
     id: 'recipe-mapo-tofu',
@@ -172,7 +173,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '下入三鲜快速大火翻炒挂汁即可。',
     ],
     tips: '茄子裹一层薄薄的淀粉炸制，能有效防止吸入过多油分。',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+    image_url: 'https://images.unsplash.com/photo-1628294895950-9805252327bc?w=500',
   },
   {
     id: 'recipe-garlic-broccoli',
@@ -197,7 +198,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '出锅前撒入剩余蒜蓉提升香味即可。',
     ],
     tips: '焯水加食用油能让西兰花翠绿诱人，分两次下蒜香气更足。',
-    image_url: 'https://images.unsplash.com/photo-1584270357187-e231122a6aa5?w=500',
+    image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500',
   },
   {
     id: 'recipe-cola-wings',
@@ -223,7 +224,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '最后开大火收浓汤汁，裹满焦糖色即可出锅。',
     ],
     tips: '收汁时要不断翻动鸡翅防止粘锅焦糊，汤汁黏稠时口感最好。',
-    image_url: 'https://images.unsplash.com/photo-1527477321055-436158a2b00d?w=500',
+    image_url: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=500',
   },
 ];
 
@@ -328,6 +329,37 @@ export function listRecipes(filters?: { cuisine?: string; difficulty?: string })
 export function getRecipeById(id: string): Recipe | null {
   const row = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id);
   return row ? rowToRecipe(row) : null;
+}
+
+export class RecipeError extends Error {
+  statusCode: number;
+  code: string;
+
+  constructor(message: string, statusCode: number = 400, code: string = 'BAD_REQUEST') {
+    super(message);
+    this.name = 'RecipeError';
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
+/**
+ * 删除指定的 AI 菜谱
+ * 安全控制：严格限制只有以 'ai-recipe-' 开头的菜谱才允许删除（若不是则返回 403 FORBIDDEN，防止误删系统内置或基础菜谱）
+ */
+export function deleteRecipe(id: string): boolean {
+  if (!id || !id.startsWith('ai-recipe-')) {
+    throw new RecipeError('仅允许删除 AI 定制菜谱，系统内置或基础菜谱禁止删除', 403, 'FORBIDDEN');
+  }
+
+  const result = db.prepare('DELETE FROM recipes WHERE id = ?').run(id);
+  if (result.changes === 0) {
+    throw new RecipeError('菜谱不存在或已被删除', 404, 'NOT_FOUND');
+  }
+
+  // 内存缓存同步清空
+  invalidateRecipeCache();
+  return true;
 }
 
 export function recommendRecipes(
@@ -547,7 +579,7 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
       ingredients: item.ingredients || [],
       instructions: item.instructions || [],
       tips: item.tips || 'AI主厨根据您冰箱现有食材量身定制。',
-      image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
+      image_url: selectRecipeImage(item.name, item.category || '创意料理', item.ingredients || []),
       created_at: now,
     }));
 

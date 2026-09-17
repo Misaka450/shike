@@ -299,7 +299,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '沿锅边淋入香醋，加适量盐翻炒均匀立刻出锅。',
     ],
     tips: '多淘洗去掉淀粉是大火爆炒爽脆的关键，香醋一定要出锅前沿锅边淋入出锅气。',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+    image_url: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=500',
   },
   {
     id: 'recipe-tofu-egg',
@@ -349,7 +349,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '加入生抽、少许盐和香醋，继续大火快炒10秒出锅。',
     ],
     tips: '用手撕比刀切更容易附着调味汁，锅气越足越脆嫩。',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+    image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500',
   },
   {
     id: 'recipe-egg-drop-soup',
@@ -432,7 +432,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '撒入青椒碎大火快速翻炒1分钟，汤汁收浓即可装盘。',
     ],
     tips: '茄子提前加盐杀水，下锅翻炒不仅不吸油，而且熟得更快、口感鲜香软糯。',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+    image_url: 'https://images.unsplash.com/photo-1628294895950-9805252327bc?w=500',
   },
   {
     id: 'recipe-yuxiang-eggplant',
@@ -965,7 +965,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '水分煸干且豆角完全熟透后关火出锅。',
     ],
     tips: '四季豆务必彻底煸炒熟透，表面微焦起皱干香不油腻，麻辣咸鲜十分开胃。',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+    image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500',
   },
   {
     id: 'recipe-oyster-sauce-lettuce',
@@ -991,7 +991,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '将滚烫浓郁的蒜香蚝油汁均匀浇淋在生菜上即可。',
     ],
     tips: '焯水加盐和油能保持生菜翠绿清脆，焯水时间切不可过长以免发软失脆。',
-    image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
+    image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500',
   },
   {
     id: 'recipe-garlic-water-spinach',
@@ -1015,7 +1015,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '出锅前加入盐、少许鸡精和剩余生蒜末快速炒匀，立刻出锅装盘。',
     ],
     tips: '炒空心菜的核心是火大油热速度快，出锅前再放盐，菜叶油绿脆嫩不发黑。',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+    image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500',
   },
   {
     id: 'recipe-supreme-broth-baby-cabbage',

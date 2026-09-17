@@ -6,11 +6,13 @@ import { CookRecipeRequestSchema, RecommendQuerySchema } from '../schemas/index.
 import { listActiveInventory } from '../services/inventoryService.js';
 import {
   cookRecipe,
+  deleteRecipe,
   generateAiRecipes,
   getCookingHistory,
   getRecipeById,
   listRecipes,
   recommendRecipes,
+  RecipeError,
 } from '../services/recipeService.js';
 
 export const recipesRoute = new Hono<AppEnv>();
@@ -51,6 +53,38 @@ recipesRoute.get('/:id', (c) => {
     success: true,
     data: recipe,
   });
+});
+
+// DELETE /:id - Delete AI recipe
+recipesRoute.delete('/:id', (c) => {
+  const id = c.req.param('id');
+  try {
+    deleteRecipe(id);
+    return c.json({
+      success: true,
+      message: '菜谱已删除',
+    });
+  } catch (err: unknown) {
+    if (err instanceof RecipeError) {
+      return c.json(
+        {
+          success: false,
+          code: err.code,
+          error: err.message,
+        },
+        err.statusCode as any
+      );
+    }
+    console.error('[DELETE /recipes/:id] 删除菜谱失败：', err);
+    return c.json(
+      {
+        success: false,
+        code: 'DELETE_FAILED',
+        error: '删除菜谱失败，请稍后重试',
+      },
+      500
+    );
+  }
 });
 
 /**
