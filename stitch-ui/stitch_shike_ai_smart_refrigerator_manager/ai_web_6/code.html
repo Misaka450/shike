@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#faf8ff;}body{overscroll-behavior:none;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-tertiary-container":"#fffbff","on-tertiary-fixed-variant":"#930013","tertiary-container":"#da3437","inverse-primary":"#68dba9","primary-fixed":"#85f8c4","secondary":"#855300","tertiary-fixed":"#ffdad7","outline":"#6d7a72","surface-container-highest":"#dae2fd","background":"#faf8ff","on-primary-container":"#f5fff7","on-secondary-fixed-variant":"#653e00","error":"#ba1a1a","primary-fixed-dim":"#68dba9","on-secondary":"#ffffff","on-secondary-container":"#684000","on-surface":"#131b2e","surface-container-lowest":"#ffffff","surface":"#faf8ff","primary-container":"#00855d","on-primary-fixed":"#002114","on-tertiary":"#ffffff","secondary-fixed-dim":"#ffb95f","primary":"#006948","secondary-container":"#fea619","surface-dim":"#d2d9f4","surface-bright":"#faf8ff","surface-tint":"#006c4a","tertiary":"#b61722","surface-variant":"#dae2fd","on-tertiary-fixed":"#410004","on-primary":"#ffffff","error-container":"#ffdad6","on-secondary-fixed":"#2a1700","surface-container-high":"#e2e7ff","inverse-surface":"#283044","on-surface-variant":"#3d4a42","secondary-fixed":"#ffddb8","surface-container":"#eaedff","surface-container-low":"#f2f3ff","tertiary-fixed-dim":"#ffb3ad","on-error-container":"#93000a","on-background":"#131b2e","inverse-on-surface":"#eef0ff","on-error":"#ffffff","outline-variant":"#bccac0","on-primary-fixed-variant":"#005137"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-xl":"2rem","space-sm":"0.5rem","gutter-mobile":"0.75rem","space-md":"1rem","space-2xl":"3rem","margin-mobile":"1rem",gutter:"1.5rem",margin:"2rem","space-lg":"1.5rem","space-xs":"0.25rem"},fontFamily:{display:["Inter"],"label-pill":["Inter"],"label-caps":["Inter"],"body-md":["Inter"],"headline-md":["Inter"],"metric-headline":["Inter"],"body-sm":["Inter"],"headline-sm":["Inter"],"headline-lg":["Inter"],"body-lg":["Inter"],"headline-lg-mobile":["Inter"]},fontSize:{display:["36px",{lineHeight:"44px",letterSpacing:"-0.025em",fontWeight:"600"}],"label-pill":["12px",{lineHeight:"16px",letterSpacing:"-0.005em",fontWeight:"500"}],"label-caps":["11px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"20px",letterSpacing:"0em",fontWeight:"400"}],"headline-md":["20px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"600"}],"metric-headline":["24px",{lineHeight:"28px",letterSpacing:"-0.02em",fontWeight:"700"}],"body-sm":["12px",{lineHeight:"16px",letterSpacing:"0.005em",fontWeight:"400"}],"headline-sm":["16px",{lineHeight:"24px",letterSpacing:"-0.01em",fontWeight:"600"}],"headline-lg":["28px",{lineHeight:"36px",letterSpacing:"-0.02em",fontWeight:"600"}],"body-lg":["16px",{lineHeight:"24px",letterSpacing:"-0.005em",fontWeight:"400"}],"headline-lg-mobile":["24px",{lineHeight:"32px",letterSpacing:"-0.015em",fontWeight:"600"}]}}}};</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface flex flex-col min-h-screen selection:bg-primary-fixed selection:text-on-primary-fixed"><header class="fixed top-0 inset-x-0 z-50 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-14 px-margin-mobile flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt='Minimalist modern brand mark icon for "Shike AI (食刻 AI)". Geometric fresh emerald green (#059669) emblem combining a stylized smart refrigerator outline with a delicate culinary sprout / clock tick indicator. Apple HIG aesthetic, clean vector line precision, white and emerald green contrast, flat modern graphic icon on crisp white background.. Design context: - Primary color: #059669
+- Font: inter
+- Mode: light
+- Roundness: rounded-md
+. The logo should be visually consistent with these brand tokens.' class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UslSgAIb7ktSYbSH6jnFoOFgd5gssy332V0CUw28mqCJBstVgafSS2_iAw3pM0axtXMBOl82jYdjhHsEuVwIDAi61dKbwTdLkfmX4ecERqFlVa4Fa5Axq1FQsZZPbY7oG2jeDmWuRDoZT2EWqyGENAeSPQiT-FaEgTfAafAIskawI0_rIXeKw1z7MqQa8TP2ahQqbJ21nuQjIia8QJgBbrenGNcvnp5OzyIkR2aJfik47gIIlq8elCc9U"/><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-surface">食刻 AI</span><span class="px-1.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-caps text-label-caps tracking-wider">Web 版</span></div></div><div class="flex items-center gap-space-sm"><button aria-label="通知中心" class="w-11 h-11 flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-14 pb-20 bg-surface"><div class="flex flex-col w-full px-margin-mobile pb-space-2xl space-y-space-md">
+<!-- Header Section with Multi-modal Badge -->
+<div class="flex flex-col pt-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-caps text-label-caps font-semibold tracking-wide">
+          AI 多模态速记
+        </span>
+<span class="text-on-surface-variant font-body-sm text-body-sm">智能解析</span>
+</div>
+<span class="text-primary font-label-pill text-label-pill flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[15px]">verified</span>
+        引擎就绪
+      </span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mt-1">
+      食材智能识别与快速入库
+    </h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+      上传料理台实拍或小票截图，食刻算法已为您匹配赏味期与分层建议
+    </p>
+</div>
+<!-- Web Intake Method Switcher (3 Tabs) -->
+<div class="grid grid-cols-3 gap-space-xs p-1 rounded-xl bg-surface-container-high">
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded-lg bg-surface-container-lowest text-primary shadow-sm transition-all duration-150" id="tab-photo" onclick="switchTab('photo')">
+<span class="material-symbols-outlined text-[20px] mb-0.5">add_a_photo</span>
+<span class="font-label-pill text-label-pill font-medium">拍照 / 上传</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-all duration-150" id="tab-receipt" onclick="switchTab('receipt')">
+<span class="material-symbols-outlined text-[20px] mb-0.5">receipt_long</span>
+<span class="font-label-pill text-label-pill font-medium">生鲜小票</span>
+</button>
+<button class="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-all duration-150" id="tab-text" onclick="switchTab('text')">
+<span class="material-symbols-outlined text-[20px] mb-0.5">edit_note</span>
+<span class="font-label-pill text-label-pill font-medium">批量速记</span>
+</button>
+</div>
+<!-- Image Detection Preview Card -->
+<div class="relative rounded-2xl overflow-hidden bg-surface-container-lowest shadow-sm">
+<div class="relative w-full h-44">
+<img class="w-full h-full object-cover" data-alt="Modern bright kitchen counter bathed in soft natural morning sunlight. Fresh grocery items neatly placed: three ripe red tomatoes in clear eco pack, a clear carton of brown eggs, tender green baby Chinese cabbage, cartons of pure milk, and an artisanal soy sauce bottle. Crisp culinary photography style with clean natural shadows and Apple HIG minimalist staging." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB76EQkILEcDWZ5xxdAQC0zfLbXGesW01u66NyrRZ-S667z39pBCSgJLxRTj_5kA_5_QPpWdmcjP0A2OlC2XSgZ8RAiUnU4vL693JhVOWctTYk482OCWQwPJ3rkoDtuCSjWpFUPWzfiMNLuWASJ45pIwwivyK7KxzIDT-kMwaT7aApMktQ2vRKUPCx3umADQDGrJxRA64QaPIGJYQBl8c7SbG1wZhrEhOry0fZBzu7WOCc70jsB6hGb"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
+<!-- AI Detection Overlay Markers (Web Simulation) -->
+<div class="absolute top-3 left-3 bg-surface-container-lowest/90 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-caps text-label-caps text-on-surface font-semibold">5 项食材已锁定</span>
+<span class="font-label-caps text-label-caps text-primary font-bold">98.4% 置信度</span>
+</div>
+<!-- Subtle Visual Detection Focus Rings -->
+<div class="absolute left-8 top-12 w-16 h-16 rounded-xl bg-primary/20 backdrop-blur-[1px] flex items-start justify-start p-1 pointer-events-none">
+<span class="px-1 py-0.5 rounded bg-primary text-on-primary font-label-caps text-[10px] scale-90 -ml-1">西红柿</span>
+</div>
+<div class="absolute right-12 top-10 w-20 h-16 rounded-xl bg-primary/20 backdrop-blur-[1px] flex items-start justify-start p-1 pointer-events-none">
+<span class="px-1 py-0.5 rounded bg-primary text-on-primary font-label-caps text-[10px] scale-90 -ml-1">鲜鸡蛋</span>
+</div>
+<!-- Change / Retake Action Button -->
+<div class="absolute bottom-3 right-3">
+<label class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-lowest/95 backdrop-blur-md text-on-surface hover:bg-surface-container-lowest text-label-pill font-label-pill font-medium shadow-sm transition-transform active:scale-95">
+<input accept="image/*" class="hidden" onchange="simulateReupload(event)" type="file"/>
+<span class="material-symbols-outlined text-[16px] text-primary">photo_library</span>
+<span>从手机相册重选</span>
+</label>
+</div>
+</div>
+</div>
+<!-- Verification & Batch Ingestion Section -->
+<div class="flex flex-col space-y-space-sm">
+<!-- List Action Toolbar -->
+<div class="flex items-center justify-between px-0.5">
+<div class="flex items-center gap-space-xs">
+<label class="flex items-center gap-1.5 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded text-primary accent-primary cursor-pointer" id="selectAllCheckbox" onchange="toggleSelectAll(this)" type="checkbox"/>
+<span class="font-headline-sm text-headline-sm text-on-surface">全选入库 (<span id="selectedCount">5</span>/5)</span>
+</label>
+</div>
+<button class="flex items-center gap-1 text-primary hover:text-primary-container font-label-pill text-label-pill font-medium py-1 px-2 rounded-lg hover:bg-primary/5 transition-colors" onclick="batchAssignZone()">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+        批量指定分区
+      </button>
+</div>
+<!-- Structured List Rows -->
+<div class="flex flex-col space-y-space-xs" id="itemsList">
+<!-- Item 1: 西红柿 -->
+<div class="item-row flex items-center p-3 rounded-2xl bg-surface-container-lowest shadow-sm gap-2.5 transition-all" data-id="1">
+<input checked="" class="row-checkbox w-4 h-4 rounded accent-primary cursor-pointer mt-0.5" onchange="updateSelectionState()" type="checkbox"/>
+<div class="w-11 h-11 rounded-xl bg-surface-container-high flex-shrink-0 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-primary text-[24px]">nutrition</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">西红柿</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">蔬菜瓜果</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<!-- Zone selector -->
+<select class="bg-surface-container-low text-on-surface font-label-pill text-[11px] rounded-md px-1.5 py-0.5 cursor-pointer outline-none">
+<option selected="">冷藏室 4°C</option>
+<option>冷冻室 -18°C</option>
+<option>常温果蔬篮</option>
+</select>
+<span class="font-body-sm text-body-sm text-on-surface-variant">赏味 5天</span>
+</div>
+</div>
+<!-- Stepper -->
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<div class="flex items-center bg-surface-container-low rounded-full px-1 py-0.5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(1, -1)">
+<span class="material-symbols-outlined text-[14px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center tabular-nums" id="qty-1">3</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(1, 1)">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant w-4">个</span>
+</div>
+</div>
+<!-- Item 2: 鲜鸡蛋 -->
+<div class="item-row flex items-center p-3 rounded-2xl bg-surface-container-lowest shadow-sm gap-2.5 transition-all" data-id="2">
+<input checked="" class="row-checkbox w-4 h-4 rounded accent-primary cursor-pointer mt-0.5" onchange="updateSelectionState()" type="checkbox"/>
+<div class="w-11 h-11 rounded-xl bg-surface-container-high flex-shrink-0 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-secondary text-[24px]">egg</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">鲜鸡蛋</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">蛋禽类</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<select class="bg-surface-container-low text-on-surface font-label-pill text-[11px] rounded-md px-1.5 py-0.5 cursor-pointer outline-none">
+<option selected="">冷藏门架 4°C</option>
+<option>冷藏抽屉</option>
+<option>常温蛋槽</option>
+</select>
+<span class="font-body-sm text-body-sm text-on-surface-variant">赏味 15天</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<div class="flex items-center bg-surface-container-low rounded-full px-1 py-0.5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(2, -1)">
+<span class="material-symbols-outlined text-[14px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center tabular-nums" id="qty-2">6</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(2, 1)">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant w-4">枚</span>
+</div>
+</div>
+<!-- Item 3: 娃娃菜 (Priority consumption chip) -->
+<div class="item-row flex items-center p-3 rounded-2xl bg-surface-container-lowest shadow-sm gap-2.5 transition-all" data-id="3">
+<input checked="" class="row-checkbox w-4 h-4 rounded accent-primary cursor-pointer mt-0.5" onchange="updateSelectionState()" type="checkbox"/>
+<div class="w-11 h-11 rounded-xl bg-surface-container-high flex-shrink-0 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-primary text-[24px]">eco</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">娃娃菜</span>
+<span class="px-1.5 py-0.5 rounded bg-secondary-container/20 text-on-secondary-container font-label-caps text-[10px] font-semibold">建议优先吃</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<select class="bg-surface-container-low text-on-surface font-label-pill text-[11px] rounded-md px-1.5 py-0.5 cursor-pointer outline-none">
+<option selected="">冷藏果蔬室 4°C</option>
+<option>常温阴凉</option>
+</select>
+<span class="font-body-sm text-body-sm text-tertiary font-medium">赏味 4天</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<div class="flex items-center bg-surface-container-low rounded-full px-1 py-0.5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(3, -1)">
+<span class="material-symbols-outlined text-[14px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center tabular-nums" id="qty-3">1</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(3, 1)">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant w-4">包</span>
+</div>
+</div>
+<!-- Item 4: 特仑苏纯牛奶 -->
+<div class="item-row flex items-center p-3 rounded-2xl bg-surface-container-lowest shadow-sm gap-2.5 transition-all" data-id="4">
+<input checked="" class="row-checkbox w-4 h-4 rounded accent-primary cursor-pointer mt-0.5" onchange="updateSelectionState()" type="checkbox"/>
+<div class="w-11 h-11 rounded-xl bg-surface-container-high flex-shrink-0 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-primary text-[24px]">local_drink</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">特仑苏纯牛奶</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">乳制品</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<select class="bg-surface-container-low text-on-surface font-label-pill text-[11px] rounded-md px-1.5 py-0.5 cursor-pointer outline-none">
+<option selected="">冷藏饮料架 4°C</option>
+<option>常温置物架</option>
+</select>
+<span class="font-body-sm text-body-sm text-on-surface-variant">饮用 7天</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<div class="flex items-center bg-surface-container-low rounded-full px-1 py-0.5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(4, -1)">
+<span class="material-symbols-outlined text-[14px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center tabular-nums" id="qty-4">2</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(4, 1)">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant w-4">盒</span>
+</div>
+</div>
+<!-- Item 5: 生抽酱油 -->
+<div class="item-row flex items-center p-3 rounded-2xl bg-surface-container-lowest shadow-sm gap-2.5 transition-all" data-id="5">
+<input checked="" class="row-checkbox w-4 h-4 rounded accent-primary cursor-pointer mt-0.5" onchange="updateSelectionState()" type="checkbox"/>
+<div class="w-11 h-11 rounded-xl bg-surface-container-high flex-shrink-0 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-secondary text-[24px]">soup_kitchen</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">生抽酱油</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-caps text-[10px]">调味配料</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<select class="bg-surface-container-low text-on-surface font-label-pill text-[11px] rounded-md px-1.5 py-0.5 cursor-pointer outline-none">
+<option selected="">常温阴凉架</option>
+<option>调味抽屉</option>
+<option>冷藏保存</option>
+</select>
+<span class="font-body-sm text-body-sm text-on-surface-variant">保质 180天</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<div class="flex items-center bg-surface-container-low rounded-full px-1 py-0.5">
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(5, -1)">
+<span class="material-symbols-outlined text-[14px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center tabular-nums" id="qty-5">1</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container active:scale-90 transition-transform" onclick="adjustQty(5, 1)">
+<span class="material-symbols-outlined text-[14px]">add</span>
+</button>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant w-4">瓶</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Web-Native Push & Expiry Notification Setting -->
+<div class="p-3.5 rounded-2xl bg-surface-container-lowest shadow-sm flex items-center justify-between">
+<div class="flex items-start gap-2.5">
+<div class="p-2 rounded-xl bg-primary/10 text-primary mt-0.5">
+<span class="material-symbols-outlined text-[20px]">notification_important</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">临期 Web 提醒通知</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">在食材临期前 48 小时推送浏览器弹窗与微信消息</span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer ml-3 flex-shrink-0">
+<input checked="" class="sr-only peer" id="reminderToggle" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Micro Nutrient Forecast Card -->
+<div class="p-3 rounded-xl bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">energy_savings_leaf</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">本次入库预计可烹饪餐次：<strong class="text-on-surface font-semibold">3~4 餐</strong></span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant tabular-nums">约 1,180 kcal</span>
+</div>
+<!-- Sticky Confirm CTA Section -->
+<div class="pt-2">
+<button class="w-full h-12 rounded-full bg-primary hover:bg-primary-container active:scale-[0.98] text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-2 shadow-md shadow-primary/20 transition-all" id="confirmBtn" onclick="confirmIngestion()">
+<span class="material-symbols-outlined text-[22px]">inventory_2</span>
+<span>确认添加入库 (<span id="ctaCount">5</span> 件食材)</span>
+</button>
+<p class="text-center font-body-sm text-[11px] text-on-surface-variant mt-2">
+      点击入库即同步更新至「食材库存」与「今日灵感」智能推荐食谱库
+    </p>
+</div>
+<!-- Ingestion Success Toast / Modal (Local Micro-interaction) -->
+<div class="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-inverse-surface text-inverse-on-surface font-body-sm text-body-sm shadow-xl flex items-center gap-2 opacity-0 pointer-events-none transition-opacity duration-300 z-50" id="toastMessage">
+<span class="material-symbols-outlined text-inverse-primary text-[18px]">check_circle</span>
+<span id="toastText">已成功将 5 种食材添加至库存！</span>
+</div>
+</div>
+<script>
+  // Simple state management for items
+  const quantities = { 1: 3, 2: 6, 3: 1, 4: 2, 5: 1 };
+
+  function adjustQty(id, delta) {
+    if (quantities[id] + delta >= 1) {
+      quantities[id] += delta;
+      document.getElementById('qty-' + id).textContent = quantities[id];
+    }
+  }
+
+  function toggleSelectAll(masterCheckbox) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => {
+      cb.checked = masterCheckbox.checked;
+    });
+    updateSelectionState();
+  }
+
+  function updateSelectionState() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    
+    document.getElementById('selectedCount').textContent = checkedCount;
+    document.getElementById('ctaCount').textContent = checkedCount;
+    
+    const master = document.getElementById('selectAllCheckbox');
+    master.checked = checkedCount === checkboxes.length;
+    master.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+
+    const btn = document.getElementById('confirmBtn');
+    if (checkedCount === 0) {
+      btn.classList.add('opacity-50', 'pointer-events-none');
+    } else {
+      btn.classList.remove('opacity-50', 'pointer-events-none');
+    }
+  }
+
+  function batchAssignZone() {
+    const defaultZone = prompt("请选择统一指定的分区：\n1. 冷藏室\n2. 冷冻室\n3. 常温阴凉", "冷藏室");
+    if (defaultZone) {
+      const selects = document.querySelectorAll('.item-row select');
+      selects.forEach(sel => {
+        sel.value = sel.options[0].text;
+      });
+      showToast("已统一设定为：" + defaultZone);
+    }
+  }
+
+  function switchTab(mode) {
+    const tabs = ['photo', 'receipt', 'text'];
+    tabs.forEach(t => {
+      const el = document.getElementById('tab-' + t);
+      if (t === mode) {
+        el.className = "flex flex-col items-center justify-center py-2 px-1 rounded-lg bg-surface-container-lowest text-primary shadow-sm transition-all duration-150";
+      } else {
+        el.className = "flex flex-col items-center justify-center py-2 px-1 rounded-lg text-on-surface-variant hover:text-on-surface transition-all duration-150";
+      }
+    });
+
+    if (mode === 'receipt') {
+      showToast("已切换至生鲜小票 OCR 识别模式");
+    } else if (mode === 'text') {
+      showToast("已切换至快捷文本批量黏贴");
+    } else {
+      showToast("已恢复图片智能感知识别");
+    }
+  }
+
+  function simulateReupload(e) {
+    if (e.target.files && e.target.files[0]) {
+      showToast("图片已重新解析，完成 5 项食材匹配");
+    }
+  }
+
+  function confirmIngestion() {
+    const count = document.getElementById('ctaCount').textContent;
+    showToast(`已成功将 ${count} 种食材添加至库存！`);
+    setTimeout(() => {
+      // Optional: simulate transition or navigate to inventory
+    }, 1500);
+  }
+
+  function showToast(text) {
+    const toast = document.getElementById('toastMessage');
+    const toastText = document.getElementById('toastText');
+    toastText.textContent = text;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+    setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0', 'pointer-events-none');
+    }, 2400);
+  }
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/85 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.05)]" data-active-classes="text-primary font-medium"><div class="flex justify-around items-center h-16 px-gutter-mobile"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="today-inspiration" href="#"><span class="material-symbols-outlined text-[24px]">auto_awesome</span><span class="font-label-pill text-label-pill">今日灵感</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] transition-all gap-0.5 text-primary font-medium" data-path="photo-identification" href="#"><span class="material-symbols-outlined text-[24px]">document_scanner</span><span class="font-label-pill text-label-pill">拍照入库</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="inventory-stock" href="#"><span class="material-symbols-outlined text-[24px]">kitchen</span><span class="font-label-pill text-label-pill">食材库存</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="cooking-guide" href="#"><span class="material-symbols-outlined text-[24px]">soup_kitchen</span><span class="font-label-pill text-label-pill">分步下厨</span></a></div></nav></body></html>

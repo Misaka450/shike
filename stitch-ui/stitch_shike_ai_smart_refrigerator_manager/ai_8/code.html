@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><title>食刻 AI</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#faf8ff;}body{overscroll-behavior:none;-webkit-font-smoothing:antialiased;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "inverse-on-surface": "#eef0ff", "surface-container-highest": "#dae2fd", "error": "#ba1a1a", "on-surface": "#131b2e", "on-tertiary": "#ffffff", "secondary-fixed": "#ffddb8", "outline": "#6d7a72", "on-primary-container": "#f5fff7", "tertiary-fixed": "#ffdad7", "surface-container-low": "#f2f3ff", "secondary-fixed-dim": "#ffb95f", "tertiary-container": "#da3437", "on-error-container": "#93000a", "primary-container": "#00855d", "inverse-primary": "#68dba9", "on-secondary-container": "#684000", "on-tertiary-fixed-variant": "#930013", "on-surface-variant": "#3d4a42", "on-primary-fixed": "#002114", "tertiary-fixed-dim": "#ffb3ad", "primary-fixed-dim": "#68dba9", "inverse-surface": "#283044", "surface-dim": "#d2d9f4", "outline-variant": "#bccac0", "surface-container-high": "#e2e7ff", "background": "#faf8ff", "tertiary": "#b61722", "secondary-container": "#fea619", "on-secondary": "#ffffff", "on-secondary-fixed": "#2a1700", "error-container": "#ffdad6", "surface-bright": "#faf8ff", "on-primary-fixed-variant": "#005137", "surface-container": "#eaedff", "surface-tint": "#006c4a", "on-primary": "#ffffff", "surface-variant": "#dae2fd", "primary": "#006948", "on-secondary-fixed-variant": "#653e00", "surface": "#faf8ff", "on-background": "#131b2e", "on-tertiary-container": "#fffbff", "secondary": "#855300", "surface-container-lowest": "#ffffff", "on-error": "#ffffff", "primary-fixed": "#85f8c4", "on-tertiary-fixed": "#410004" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-xl": "2rem", "space-sm": "0.5rem", "space-xs": "0.25rem", "space-lg": "1.5rem", "gutter-mobile": "0.75rem", "space-md": "1rem", "margin-mobile": "1rem", "gutter": "1.5rem", "space-2xl": "3rem", "margin": "2rem" }, fontFamily: { "headline-lg-mobile": ["Inter"], "headline-lg": ["Inter"], "headline-md": ["Inter"], "label-caps": ["Inter"], "metric-headline": ["Inter"], "display": ["Inter"], "body-sm": ["Inter"], "headline-sm": ["Inter"], "body-md": ["Inter"], "label-pill": ["Inter"], "body-lg": ["Inter"] }, fontSize: { "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}], "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "label-caps": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}], "metric-headline": ["24px", {"lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "700"}], "display": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "600"}], "body-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.005em", "fontWeight": "400"}], "headline-sm": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400"}], "label-pill": ["12px", {"lineHeight": "16px", "letterSpacing": "-0.005em", "fontWeight": "500"}], "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "400"}] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen flex flex-col antialiased"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.03)]"><div class="px-5 pt-1 flex items-center justify-between"><span class="font-label-caps text-label-caps text-on-surface font-semibold tracking-tight">9:41</span><div class="h-6 w-28 bg-on-surface rounded-full flex items-center justify-end px-2 gap-1.5 shadow-sm"><div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div><div class="w-2.5 h-2.5 rounded-full bg-surface-container-highest/40"></div></div><div class="flex items-center gap-1.5 text-on-surface"><span class="material-symbols-outlined text-[14px]">signal_cellular_alt</span><span class="material-symbols-outlined text-[14px]">wifi</span><span class="material-symbols-outlined text-[16px]">battery_full</span></div></div><div class="h-14 px-4 flex items-center justify-between gap-3"><div class="flex items-center gap-2.5 min-w-0 flex-1"><img alt='Minimalist modern brand mark icon for "Shike AI (食刻 AI)". Geometric fresh emerald green (#059669) emblem combining a stylized smart refrigerator outline with a delicate culinary sprout / clock tick indicator. Apple HIG aesthetic, clean vector line precision, white and emerald green contrast, flat modern graphic icon on crisp white background.. Design context: - Primary color: #059669
+- Font: inter
+- Mode: light
+- Roundness: rounded-md
+. The logo should be visually consistent with these brand tokens.' class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1UslSgAIb7ktSYbSH6jnFoOFgd5gssy332V0CUw28mqCJBstVgafSS2_iAw3pM0axtXMBOl82jYdjhHsEuVwIDAi61dKbwTdLkfmX4ecERqFlVa4Fa5Axq1FQsZZPbY7oG2jeDmWuRDoZT2EWqyGENAeSPQiT-FaEgTfAafAIskawI0_rIXeKw1z7MqQa8TP2ahQqbJ21nuQjIia8QJgBbrenGNcvnp5OzyIkR2aJfik47gIIlq8elCc9U"/><div class="flex flex-col min-w-0"><div class="flex items-center gap-1.5"><span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight truncate">食刻 AI</span><div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-container-lowest shadow-[0_1px_3px_rgba(15,23,42,0.04)]"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span class="font-label-caps text-label-caps text-primary font-semibold">4℃ 在线</span></div></div><span class="font-body-sm text-body-sm text-on-surface-variant truncate">Guided Cooking</span></div></div><div class="flex items-center gap-2 flex-shrink-0"><button class="w-9 h-9 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-14 pb-28 px-4 bg-surface"><div class="flex flex-col w-full gap-4">
+<!-- Top Action Navigation -->
+<div class="flex items-center justify-between py-1 px-1">
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-on-surface transition-colors py-1.5 px-2.5 rounded-full bg-surface-container-lowest shadow-[0_1px_3px_rgba(15,23,42,0.04)]" type="button">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+<span class="font-label-pill text-label-pill font-semibold">返回今日推荐</span>
+</button>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-low text-primary">
+<span class="material-symbols-outlined text-[15px] animate-pulse">mic</span>
+<span class="font-label-caps text-label-caps tracking-tight">语音播报就绪</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface-variant shadow-[0_1px_3px_rgba(15,23,42,0.04)]" type="button">
+<span class="material-symbols-outlined text-[18px]">bookmark_border</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface-variant shadow-[0_1px_3px_rgba(15,23,42,0.04)]" type="button">
+<span class="material-symbols-outlined text-[18px]">share</span>
+</button>
+</div>
+</div>
+<!-- Hero Visual & Key Recipe Info -->
+<div class="flex flex-col rounded-3xl bg-surface-container-lowest p-3 shadow-[0_2px_12px_rgba(15,23,42,0.04)] gap-3.5">
+<div class="relative w-full aspect-[16/9] rounded-2xl overflow-hidden shadow-inner bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A beautifully plated dish of Chinese tomato scrambled eggs with vibrant red glistening tomatoes, fluffy golden curd eggs, and sliced scallions on a rustic speckled ceramic plate, accompanied by crisp blanched greens on a warm natural wood dining table in soft daylight." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvLX-vmYSwgPjzE8K9plMGSf9t-fB3kUQsqCsWsM6QVhYK0GqwAuucovbVk9rIropvH-_Po6SSjcsRnagN51Hy6QrOJIlLT6f1QJIxDMSqYxhk7-vxv6XpUjJWzcejyJ-Ox5S4iCqvjr0FGvU-bRPJyAaquHFkSBaWLmc75v1WIQSU-hPx6rIPc62pj2qaljJNiAvUEi8oXIcsFHIvH2w8F4Hqq4jgVYtSrcWsa4XzdP-kQLHMqdOJ"/>
+<div class="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-on-primary font-label-caps text-label-caps shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span>
+          冰箱全匹配 100%
+        </span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-caps text-label-caps font-semibold shadow-sm">
+          消灭临期
+        </span>
+</div>
+<div class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-full bg-on-surface/70 backdrop-blur-md text-surface font-label-caps text-label-caps">
+        主厨认证快手菜
+      </div>
+</div>
+<!-- Title & Specs -->
+<div class="flex flex-col gap-2 px-1">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight">
+        经典西红柿炒蛋配温拌时蔬
+      </h1>
+<div class="grid grid-cols-4 gap-1.5 p-2 rounded-2xl bg-surface-container-low text-center">
+<div class="flex flex-col items-center justify-center py-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">耗时</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5 tabular-nums">15分</span>
+</div>
+<div class="flex flex-col items-center justify-center py-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">难度</span>
+<span class="font-headline-sm text-headline-sm text-primary mt-0.5">零失误</span>
+</div>
+<div class="flex flex-col items-center justify-center py-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">推荐分量</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">1~2人</span>
+</div>
+<div class="flex flex-col items-center justify-center py-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">烹饪手法</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">滑炒·烫</span>
+</div>
+</div>
+<!-- Macro Nutrients Pill Card -->
+<div class="flex items-center justify-between p-3 rounded-2xl bg-surface-container-high/60 px-3.5">
+<div class="flex items-baseline gap-1">
+<span class="font-metric-headline text-metric-headline text-on-surface tabular-nums">385</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">kcal</span>
+</div>
+<div class="flex items-center gap-3 font-body-sm text-body-sm tabular-nums">
+<span class="text-on-surface"><span class="font-semibold text-primary">24g</span> 蛋白质</span>
+<span class="text-on-surface"><span class="font-semibold text-on-surface">16g</span> 净碳水</span>
+<span class="text-on-surface"><span class="font-semibold text-on-surface">12g</span> 脂肪</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Interactive Fridge Inventory Linkage Accordion -->
+<div class="flex flex-col rounded-3xl bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">kitchen</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">冰箱在库食材联动</span>
+</div>
+<span class="font-label-pill text-label-pill px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-semibold">
+        3/3 全部就绪
+      </span>
+</div>
+<!-- Ingredient Rows -->
+<div class="flex flex-col gap-2">
+<!-- Item 1 -->
+<div class="flex items-center justify-between p-2.5 rounded-2xl bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A close-up studio shot of two ripe, glossy organic red vine tomatoes resting on a neutral slate surface with clean studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCi15S__QLIpxb4rs7OOTdto0x2CfwOjocnxAyRKBqEZuy6vb0ll9WDQPCSo47EN1Ga8z3ITo39meplE6QcxDV26f8fWjr3ykoPSjR4UxhBThjG4SckcY9IzN1qPG_QAo0it_ZIxhGStJD3p9TJDHyCup5bGZMgmrO_WBlrnzQTZbq3TyvBFE1LC2ybpeRMBWeBT9tfajhmAnnp3rVm6Nk_dYgfmcbgCuAZjsxPQxUEQ2FuizwmC4fV"/>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">熟软番茄</span>
+<span class="font-label-caps text-label-caps text-primary px-1.5 py-0.2 rounded bg-surface-container-lowest font-medium">最佳赏味期</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant tabular-nums">在库 3个 · 扣减 2个 · 留存 1个</span>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between p-2.5 rounded-2xl bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Three organic farm-fresh brown eggs with intact natural speckled shells grouped together on clean minimalist linen background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnPcWGlzdkPFCm10lRSh3A6tV7nEV4a4GzeGTMsZNrAQG0wiTYQnySzYT61-K-jdGELPj_h-qJ_o3nCyr1N_JarpRaGrkGxdCctDgpISTsjOoj5oMX4EfTXdOEphJiRCulO_tSXyklvEgr38ZMO32VjHuJxdglLmRsq4qnq39H_4izp30U5SIv6_zMz4pzjaIbx85h8SXw__6GMX29i7rAXtaZTaqwOlABU836n-2ZiXUt5Kh5vUm3"/>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">生态鲜鸡蛋</span>
+<span class="font-label-caps text-label-caps text-tertiary px-1.5 py-0.2 rounded bg-error-container font-semibold">剩 1 天到期</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant tabular-nums">在库 4枚 · 扣减 3枚 · 留存 1枚</span>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center justify-between p-2.5 rounded-2xl bg-surface-container-low">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Fresh organic baby bok choy and baby napa cabbage heads with crisp pale green stalks and dewy leaves on a bright clean counter." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBarZlRw6UqbE1m7-vxojoJHRhegzIDwJtVBMSzLLvqI0000tSjdbcb2GyfrRqR-hMp-PA3af5pPc_CDq3kCOQWeWBM7CL9mz-ggHagZyI1QVeqd4KrkF6aViY0no4gU2Mdi-34P9oxCxzhyxdme6Ald6Txea7uZtZAIQo20O0L4CPWQee2ep_eUSRv9V3xQJBCz1XxKCM34F3zmKaj06L2an2uA71QIfm_cG4AyTeyNXbNJmfkgI1H"/>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">高山娃娃菜</span>
+<span class="font-label-caps text-label-caps text-primary px-1.5 py-0.2 rounded bg-surface-container-lowest font-medium">冷藏 4℃</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant tabular-nums">在库 1包 · 扣减 1/2包 · 留存 1/2包</span>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+</div>
+</div>
+<!-- Pantry Essentials -->
+<div class="pt-2 border-t-0 bg-surface-container-high/40 p-2.5 rounded-xl">
+<div class="flex items-center gap-1.5 text-on-surface-variant font-label-caps text-label-caps mb-1">
+<span class="material-symbols-outlined text-[14px]">soup_kitchen</span>
+<span>常备调味辅料（已齐备）</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">
+        食用油 15ml · 低钠食盐 2g · 特级生抽 5ml · 翠绿小葱花适量
+      </p>
+</div>
+</div>
+<!-- Step-by-Step Cooking Cards Section -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-1">
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold">分步下厨引导</h2>
+<span class="font-label-pill text-label-pill text-primary font-semibold">4 步极简操作</span>
+</div>
+<!-- Step 1 -->
+<div class="flex flex-col rounded-3xl bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] gap-2.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-label-caps text-label-caps flex items-center justify-center font-bold">01</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">备料与蛋液调理</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant tabular-nums">约 3 分钟</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+        西红柿洗净切成均匀滚刀块备用；将3枚鲜鸡蛋打入大碗中，加入1g低钠盐和一汤匙温水（约15ml），用筷子顺时针快速搅打，直至表面泛起密布微小气泡。
+      </p>
+<div class="p-2.5 rounded-xl bg-surface-container-low flex items-start gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px] flex-shrink-0 mt-0.5">tips_and_updates</span>
+<p class="font-body-sm text-body-sm text-on-surface font-medium">
+<span class="text-secondary font-semibold">主厨秘诀：</span>温水搅蛋法可降低蛋液受热紧缩度，使滑炒出的蛋块嫩度提升 30%。
+        </p>
+</div>
+</div>
+<!-- Step 2 (With Interactive Timer) -->
+<div class="flex flex-col rounded-3xl bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-label-caps text-label-caps flex items-center justify-center font-bold">02</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">滑炒热蛋 (微凝即起)</span>
+</div>
+<span class="font-label-caps text-label-caps text-primary font-semibold">关键控温</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+        平底不粘锅烧至中高火，倒入10ml食用油。微热后倒入蛋液，待底面微定型迅速用铲背往中心推推，呈金黄大嫩块立刻盛出出锅，切忌久炒老化。
+      </p>
+<!-- Timer Widget Component -->
+<div class="flex items-center justify-between p-3 rounded-2xl bg-surface-container-high/70">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary text-[24px]">timer</span>
+<div class="flex flex-col">
+<span class="font-metric-headline text-metric-headline text-on-surface tabular-nums" id="timer-display-1">01:45</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">滑蛋定型倒计时</span>
+</div>
+</div>
+<button class="px-4 py-2 rounded-full bg-primary text-on-primary font-label-pill text-label-pill font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform" id="timer-btn-1" onclick="toggleTimer(1, 105)" type="button">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span>开始计时</span>
+</button>
+</div>
+</div>
+<!-- Step 3 (With Interactive Timer) -->
+<div class="flex flex-col rounded-3xl bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-label-caps text-label-caps flex items-center justify-center font-bold">03</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">煸炒番茄析出浓沙汁</span>
+</div>
+<span class="font-label-caps text-label-caps text-secondary font-semibold">果酸充分析出</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+        无需另洗新锅，借余油倒入番茄块中火慢炒。用锅铲稍加按压果肉，撒入剩余1g盐，番茄受盐分催化在两分钟内自然熬煮出红润浓厚的天然沙沙茄汁。
+      </p>
+<!-- Timer Widget Component -->
+<div class="flex items-center justify-between p-3 rounded-2xl bg-surface-container-high/70">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary text-[24px]">timer</span>
+<div class="flex flex-col">
+<span class="font-metric-headline text-metric-headline text-on-surface tabular-nums" id="timer-display-2">02:00</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">自然出沙熬煮</span>
+</div>
+</div>
+<button class="px-4 py-2 rounded-full bg-primary text-on-primary font-label-pill text-label-pill font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform" id="timer-btn-2" onclick="toggleTimer(2, 120)" type="button">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span>开始计时</span>
+</button>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="flex flex-col rounded-3xl bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] gap-2.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-label-caps text-label-caps flex items-center justify-center font-bold">04</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">合炒入味与温拌时蔬</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant tabular-nums">最后 1 分钟</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+        将滑蛋回锅，淋入特级生抽，让松软蛋块充分吸收鲜红茄汁；娃娃菜洗净沸水温烫45秒捞出沥水置于盘侧，撒入葱花起锅装盘。
+      </p>
+<div class="flex items-center gap-2 p-2.5 rounded-xl bg-surface-container-low">
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">盘底微挂红润浓汁，蛋嫩菜爽脆，均衡低负担。</span>
+</div>
+</div>
+</div>
+<!-- Bottom Interactive CTA Panel -->
+<div class="mt-2 flex flex-col gap-2 p-4 rounded-3xl bg-surface-container-lowest shadow-[0_4px_20px_rgba(15,23,42,0.06)]">
+<div class="flex items-center justify-between px-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">宏量营养比例配比</span>
+<span class="font-label-caps text-label-caps text-primary font-semibold tabular-nums">P: 30% · C: 20% · F: 50%</span>
+</div>
+<button class="w-full h-11 rounded-full bg-primary text-on-primary flex items-center justify-center gap-2 font-label-pill text-label-pill font-semibold shadow-[0_4px_12px_rgba(0,105,72,0.25)] hover:bg-primary-container active:scale-[0.98] transition-all" id="complete-cooking-btn" onclick="completeCookingFlow()" type="button">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>完成下厨，自动扣减食材库存 (鸡蛋-3, 西红柿-2)</span>
+</button>
+</div>
+</div>
+<script>
+  const timers = {};
+
+  function toggleTimer(id, defaultSeconds) {
+    const btn = document.getElementById(`timer-btn-${id}`);
+    const display = document.getElementById(`timer-display-${id}`);
+    
+    if (timers[id] && timers[id].running) {
+      clearInterval(timers[id].interval);
+      timers[id].running = false;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">play_arrow</span><span>继续计时</span>';
+      btn.className = btn.className.replace('bg-secondary-container', 'bg-primary').replace('text-on-secondary-container', 'text-on-primary');
+    } else {
+      if (!timers[id]) {
+        timers[id] = { remaining: defaultSeconds };
+      }
+      timers[id].running = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">pause</span><span>暂停</span>';
+      
+      timers[id].interval = setInterval(() => {
+        if (timers[id].remaining > 0) {
+          timers[id].remaining--;
+          const mins = Math.floor(timers[id].remaining / 60).toString().padStart(2, '0');
+          const secs = (timers[id].remaining % 60).toString().padStart(2, '0');
+          display.innerText = `${mins}:${secs}`;
+        } else {
+          clearInterval(timers[id].interval);
+          timers[id].running = false;
+          display.innerText = '00:00';
+          btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">done_all</span><span>已完成</span>';
+          btn.className = 'px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label-pill text-label-pill font-semibold flex items-center gap-1.5 cursor-default';
+        }
+      }, 1000);
+    }
+  }
+
+  function completeCookingFlow() {
+    const btn = document.getElementById('complete-cooking-btn');
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>正在同步智能冰箱库存...</span>';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">verified</span><span>库存扣减成功！今日下厨已记录</span>';
+      btn.className = 'w-full h-11 rounded-full bg-surface-container-high text-primary flex items-center justify-center gap-2 font-label-pill text-label-pill font-semibold';
+    }, 1200);
+  }
+</script></main><div class="fixed bottom-0 w-full z-50 pb-safe pointer-events-none"><div class="px-4 pb-3 pointer-events-auto"><nav class="bg-surface-container-lowest/90 backdrop-blur-xl rounded-full px-3 py-1.5 flex items-center justify-between shadow-[0_8px_24px_-4px_rgba(15,23,42,0.08)]" data-active-classes="text-primary font-semibold"><a class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 text-on-surface-variant hover:text-on-surface transition-colors min-h-[44px]" data-path="today-inspiration" href="#"><span class="material-symbols-outlined text-[22px]">auto_awesome</span><span class="font-label-caps text-label-caps mt-0.5">今日灵感</span></a><a class="flex-shrink-0 flex items-center justify-center mx-1 min-h-[44px]" data-path="vision-scan" href="#"><div class="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-[0_4px_12px_rgba(0,105,72,0.3)] hover:scale-105 active:scale-95 transition-transform"><span class="material-symbols-outlined text-[24px]">center_focus_strong</span></div></a><a class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 text-on-surface-variant hover:text-on-surface transition-colors relative min-h-[44px]" data-path="smart-inventory" href="#"><div class="relative flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">kitchen</span><span class="absolute -top-1 -right-2 px-1 rounded-full bg-tertiary text-on-tertiary font-label-caps text-[9px] font-bold leading-none py-0.5">2</span></div><span class="font-label-caps text-label-caps mt-0.5">冰箱库存</span></a><a aria-current="page" class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 transition-colors min-h-[44px] text-primary font-semibold" data-path="guided-cooking" href="#"><span class="material-symbols-outlined text-[22px]">skillet</span><span class="font-label-caps text-label-caps mt-0.5">分步下厨</span></a></nav></div></div></body></html>

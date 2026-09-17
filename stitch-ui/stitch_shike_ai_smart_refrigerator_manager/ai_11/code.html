@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><title>食刻 AI (Shike AI) - 智能家庭冰箱管理与精准食谱推荐</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-primary-fixed": "#002114", "error": "#ba1a1a", "on-secondary-fixed": "#2a1700", "secondary-fixed": "#ffddb8", "outline-variant": "#bccac0", "primary": "#006948", "surface-dim": "#d2d9f4", "surface-container-lowest": "#ffffff", "on-primary-container": "#f5fff7", "primary-fixed": "#85f8c4", "on-secondary-container": "#684000", "surface-bright": "#faf8ff", "tertiary": "#b61722", "on-surface-variant": "#3d4a42", "on-surface": "#131b2e", "surface-container-high": "#e2e7ff", "on-background": "#131b2e", "tertiary-fixed": "#ffdad7", "inverse-primary": "#68dba9", "on-tertiary-container": "#fffbff", "background": "#faf8ff", "on-tertiary": "#ffffff", "tertiary-fixed-dim": "#ffb3ad", "on-primary": "#ffffff", "surface-tint": "#006c4a", "secondary-fixed-dim": "#ffb95f", "surface-container-highest": "#dae2fd", "on-secondary": "#ffffff", "surface-container": "#eaedff", "on-error-container": "#93000a", "primary-fixed-dim": "#68dba9", "secondary-container": "#fea619", "inverse-surface": "#283044", "on-primary-fixed-variant": "#005137", "surface-container-low": "#f2f3ff", "tertiary-container": "#da3437", "primary-container": "#00855d", "on-tertiary-fixed-variant": "#930013", "inverse-on-surface": "#eef0ff", "surface-variant": "#dae2fd", "error-container": "#ffdad6", "on-secondary-fixed-variant": "#653e00", "on-error": "#ffffff", "surface": "#faf8ff", "outline": "#6d7a72", "secondary": "#855300", "on-tertiary-fixed": "#410004" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-lg": "1.5rem", "gutter-mobile": "0.75rem", "space-md": "1rem", "margin-mobile": "1rem", "gutter": "1.5rem", "space-xl": "2rem", "space-2xl": "3rem", "space-sm": "0.5rem", "margin": "2rem", "space-xs": "0.25rem" }, fontFamily: { "body-md": ["Inter"], "label-caps": ["Inter"], "metric-headline": ["Inter"], "body-lg": ["Inter"], "headline-lg-mobile": ["Inter"], "headline-lg": ["Inter"], "body-sm": ["Inter"], "display": ["Inter"], "label-pill": ["Inter"], "headline-sm": ["Inter"], "headline-md": ["Inter"] }, fontSize: { "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }], "label-caps": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "metric-headline": ["24px", { "lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.005em", "fontWeight": "400" }], "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "600" }], "label-pill": ["12px", { "lineHeight": "16px", "letterSpacing": "-0.005em", "fontWeight": "500" }], "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><header class="fixed top-0 left-0 right-0 z-40 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 w-full px-space-md lg:px-space-xl flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md"><img alt="Minimalist modern brand mark icon for Shike AI" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UslSgAIb7ktSYbSH6jnFoOFgd5gssy332V0CUw28mqCJBstVgafSS2_iAw3pM0axtXMBOl82jYdjhHsEuVwIDAi61dKbwTdLkfmX4ecERqFlVa4Fa5Axq1FQsZZPbY7oG2jeDmWuRDoZT2EWqyGENAeSPQiT-FaEgTfAafAIskawI0_rIXeKw1z7MqQa8TP2ahQqbJ21nuQjIia8QJgBbrenGNcvnp5OzyIkR2aJfik47gIIlq8elCc9U"/><div class="flex flex-col"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">食刻 AI</span><span class="font-label-caps text-label-caps uppercase tracking-wider text-primary font-bold bg-surface-container px-1.5 py-0.5 rounded">Shike</span></div><span class="hidden sm:inline-block font-body-sm text-body-sm text-on-surface-variant">智能家庭冰箱管理</span></div></div><div class="flex-1 max-w-lg hidden md:block"><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-3 text-outline text-[18px] pointer-events-none">search</span><input class="w-full h-10 pl-9 pr-4 bg-surface-container-low rounded-full font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all" placeholder="全局检索现有食材、保质期或定制食谱 (如: 嫩豆腐, 减脂午餐)..." type="search"/></div></div><div class="flex items-center gap-space-sm sm:gap-space-md"><a class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-container transition-colors" data-path="food-inventory" href="#"><span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span><span class="font-label-pill text-label-pill font-semibold">2件临期</span></a><div class="hidden sm:flex items-center gap-space-sm pl-space-xs"><div class="text-right hidden lg:block"><div class="font-headline-sm text-body-sm font-semibold text-on-surface">顾医生家庭厨房</div><div class="font-body-sm text-body-sm text-on-surface-variant">常规双门 · 3人常住</div></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></div></header><aside class="hidden md:flex fixed top-16 left-0 bottom-0 w-64 bg-surface-container-lowest flex-col justify-between p-space-md shadow-[0_1px_8px_rgba(0,0,0,0.02)] z-30"><div class="flex flex-col gap-space-md"><div class="px-3 pt-2"><span class="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">厨房空间导航</span></div><nav class="flex flex-col gap-1.5" data-active-classes="bg-primary text-on-primary shadow-sm font-medium rounded-xl"><a class="flex items-center gap-3 px-3.5 py-3 rounded-xl font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="daily-inspiration" href="#"><span class="material-symbols-outlined text-[20px]">auto_awesome</span><span>今日灵感与推荐</span></a><a class="flex items-center gap-3 px-3.5 py-3 rounded-xl font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="camera-ingestion" href="#"><span class="material-symbols-outlined text-[20px]">photo_camera</span><span>冰箱拍照入库</span></a><a aria-current="page" class="flex items-center gap-3 px-3.5 py-3 transition-all bg-primary text-on-primary shadow-sm font-medium rounded-xl" data-path="food-inventory" href="#"><span class="material-symbols-outlined text-[20px]">kitchen</span><span>食材库存看板</span></a><a class="flex items-center gap-3 px-3.5 py-3 rounded-xl font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="cooking-walkthrough" href="#"><span class="material-symbols-outlined text-[20px]">menu_book</span><span>沉浸分步下厨</span></a></nav></div><div class="p-space-sm rounded-xl bg-surface-container-low flex flex-col gap-space-xs"><div class="flex items-center gap-2 text-primary"><span class="material-symbols-outlined text-[18px]">verified</span><span class="font-label-pill text-label-pill font-semibold">真实家用保鲜模式</span></div><p class="font-body-sm text-body-sm text-on-surface-variant leading-tight">无冗余传感器干扰，纯视觉与保质期算法驱动。</p></div></aside><div class="md:pl-64"><main class="w-full min-h-screen pt-16 pb-20 md:pb-space-xl bg-background"><div class="flex flex-col w-full">
+<div class="px-space-md lg:px-space-xl py-space-md lg:py-space-lg max-w-[1520px] mx-auto w-full flex flex-col gap-space-lg">
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-space-md">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps tracking-widest text-primary uppercase bg-surface-container px-2 py-0.5 rounded-full">Vision Live Inventory</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+            视觉保鲜监控持续运作
+          </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">智能家庭食材在库看板</h1>
+</div>
+<div class="flex items-center gap-space-sm flex-wrap">
+<button class="h-10 px-4 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill transition-all flex items-center gap-1.5 shadow-sm active:scale-95" id="quick-add-btn">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+<span>+ 手动速记</span>
+</button>
+<a class="h-10 px-5 rounded-full bg-primary hover:bg-primary-container text-on-primary font-label-pill text-label-pill transition-all flex items-center gap-1.5 shadow-sm active:scale-95" data-path="camera-ingestion" href="#">
+<span class="material-symbols-outlined text-[18px]">add_a_photo</span>
+<span>+ 拍照入库</span>
+</a>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-caps text-label-caps tracking-wider uppercase">在库总品类</span>
+<span class="material-symbols-outlined text-primary text-[20px]">inventory_2</span>
+</div>
+<div class="mt-space-sm flex items-baseline gap-2">
+<span class="font-display text-display text-on-surface font-bold">18</span>
+<span class="font-body-md text-body-md text-on-surface-variant">种在库管理</span>
+</div>
+<div class="mt-space-xs font-body-sm text-body-sm text-on-surface-variant">
+          动态保质期精准计算中
+        </div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-caps text-label-caps tracking-wider uppercase">充足新鲜</span>
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
+</div>
+<div class="mt-space-sm flex items-baseline gap-2">
+<span class="font-display text-display text-primary font-bold">12</span>
+<span class="font-body-md text-body-md text-on-surface-variant">种状态良好</span>
+</div>
+<div class="mt-space-xs font-body-sm text-body-sm text-on-surface-variant">
+          剩余可食用期 &gt; 4 天
+        </div>
+</div>
+<div class="bg-secondary-fixed/40 p-space-md rounded-2xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between text-on-secondary-fixed">
+<span class="font-label-caps text-label-caps tracking-wider uppercase">临期急需</span>
+<span class="material-symbols-outlined text-secondary text-[20px]">notification_important</span>
+</div>
+<div class="mt-space-sm flex items-baseline gap-2">
+<span class="font-display text-display text-secondary font-bold">2</span>
+<span class="font-body-md text-body-md text-on-secondary-fixed-variant">种急需消耗</span>
+</div>
+<div class="mt-space-xs font-body-sm text-body-sm text-on-secondary-fixed">
+          ⚠️ ≤48h 建议优先安排餐谱
+        </div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-caps text-label-caps tracking-wider uppercase">极鲜冷冻</span>
+<span class="material-symbols-outlined text-primary-container text-[20px]">ac_unit</span>
+</div>
+<div class="mt-space-sm flex items-baseline gap-2">
+<span class="font-display text-display text-on-surface font-bold">4</span>
+<span class="font-body-md text-body-md text-on-surface-variant">种深冷锁鲜</span>
+</div>
+<div class="mt-space-xs font-body-sm text-body-sm text-on-surface-variant">
+          牛排、海产与高蛋白食材
+        </div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md lg:p-space-lg rounded-2xl shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center gap-space-md">
+<div class="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+<svg class="w-20 h-20 -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="94, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+<div class="absolute flex flex-col items-center justify-center">
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">94</span>
+<span class="font-label-caps text-[9px] text-on-surface-variant">分健康度</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface">家庭周转健康评价：优秀</span>
+<span class="bg-primary-fixed text-on-primary-fixed text-[11px] font-semibold px-2 py-0.5 rounded-full">持续优化中</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            基于三口之家实际摄入节律分析，当前食材结构与进出库周转率达到智能家庭保鲜高标准。
+          </p>
+</div>
+</div>
+<div class="flex items-center gap-space-lg">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface-variant">零浪费达标率</span>
+<span class="font-metric-headline text-metric-headline text-primary font-bold">98.2%</span>
+</div>
+<div class="w-[1px] h-8 bg-outline-variant/30"></div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface-variant">平均周转周期</span>
+<span class="font-metric-headline text-metric-headline text-on-surface font-bold">4.2 <span class="text-body-sm font-normal">天</span></span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between flex-wrap gap-space-sm">
+<div class="inline-flex p-1 bg-surface-container-high rounded-full overflow-x-auto max-w-full" id="filter-tabs">
+<button class="filter-tab px-4 py-1.5 rounded-full text-label-pill font-label-pill bg-primary text-on-primary shadow-sm transition-all whitespace-nowrap" data-filter="all">全部 (18)</button>
+<button class="filter-tab px-4 py-1.5 rounded-full text-label-pill font-label-pill text-on-surface-variant hover:text-on-surface transition-all whitespace-nowrap" data-filter="fridge">冷藏 (12)</button>
+<button class="filter-tab px-4 py-1.5 rounded-full text-label-pill font-label-pill text-on-surface-variant hover:text-on-surface transition-all whitespace-nowrap" data-filter="freezer">冷冻 (4)</button>
+<button class="filter-tab px-4 py-1.5 rounded-full text-label-pill font-label-pill text-on-surface-variant hover:text-on-surface transition-all whitespace-nowrap" data-filter="pantry">常温/调味 (2)</button>
+<button class="filter-tab px-4 py-1.5 rounded-full text-label-pill font-label-pill text-on-surface-variant hover:text-on-surface transition-all whitespace-nowrap flex items-center gap-1" data-filter="expiring">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+            只看临期 (2)
+          </button>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-body-sm text-body-sm text-on-surface-variant">排序：</span>
+<select class="bg-surface-container-lowest text-on-surface font-body-sm text-body-sm rounded-full px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary" id="sort-select">
+<option value="expiry-asc">保质期最近优先</option>
+<option value="entry-desc">入库时间最新</option>
+<option value="name-asc">食材名称首字母</option>
+</select>
+</div>
+</div>
+<div class="flex flex-col gap-space-sm" id="inventory-list">
+<div class="inventory-card bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-category="fridge" data-status="urgent">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Close up fresh high quality farm eggs sitting neatly in a clean minimalist modern refrigerator egg holder tray, soft morning diffuse lighting, crisp editorial kitchen product photography, neutral studio tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArH4sX4MrKlmVHSy34_QND-S8cmas-mFf8897UUoyxVNFOScG1Occ09D-hr9xrFiAtwEllz2ztDSuPI_2iR8iRtzD6qWhR3iFlFEqAqu4fVXsRfiRZK14ayTEvNMx9K8plFncJSc2YFInXf699LSmUv_pSlAKPW3ONUHDjGdlrGbsi_DnUESMNyYNR0lJbZ6voQRmPBKM5VmKKOIvnTY7QZjl4kK2htWWsqSv9QXZIMTbyO7ijP21u"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">农家鲜鸡蛋</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-caps text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  临期 (剩 1 天 · 建议先吃)
+                </span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                门架储物格 · 2枚 · 建议消耗方案: <span class="text-on-surface font-medium">西红柿炒蛋</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
+<a class="h-9 px-4 rounded-full bg-primary hover:bg-primary-container text-on-primary font-label-pill text-label-pill flex items-center gap-1 shadow-sm transition-all active:scale-95" data-path="cooking-walkthrough" href="#">
+<span class="material-symbols-outlined text-[16px]">soup_kitchen</span>
+<span>一键做菜</span>
+</a>
+<button class="mark-done-btn h-9 px-3 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>已吃完划扣</span>
+</button>
+</div>
+</div>
+<div class="inventory-card bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-category="fridge" data-status="urgent">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Plump ripe Provence vine tomatoes placed in clean contemporary kitchen setting, delicate dewdrops on smooth red skin, natural Nordic morning kitchen lighting, crisp food still life shot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLeF1nETQjqg-jgPLLMA8D18wFc6kgN7agHMUCsqkqfVte-Sxoo4vozY-LSoEe9D8_boeh9hjU4NQ9U-FmkYgDkze9oSxutaZzj-WuRpRfzMApP_WCfgJanfTwVhVH6wIJhXTtCatsn5x6cBfoap6fvJrqWzl-t87kS6zrz-J6b1G6iYxDQkSvphDzjpO5AkBB6rJc3X5Csu25S4JXz8LLEzvbiP0mwFsXOV40AYNex5Mt_UOMrU65"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">普罗旺斯西红柿</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-caps text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  临期 (剩 2 天 · 建议先吃)
+                </span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                果蔬冷藏抽屉 · 3个 · 建议消耗方案: <span class="text-on-surface font-medium">番茄浓汤 / 茄汁意面</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
+<a class="h-9 px-4 rounded-full bg-primary hover:bg-primary-container text-on-primary font-label-pill text-label-pill flex items-center gap-1 shadow-sm transition-all active:scale-95" data-path="cooking-walkthrough" href="#">
+<span class="material-symbols-outlined text-[16px]">soup_kitchen</span>
+<span>一键做菜</span>
+</a>
+<button class="mark-done-btn h-9 px-3 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>已吃完划扣</span>
+</button>
+</div>
+</div>
+<div class="inventory-card bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-category="fridge" data-status="expired">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Japanese silken tofu cube cleanly cut, pristine white texture on minimalist matte ceramic dish, soft modern daylight kitchen photography, quiet aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDC1vvyK32d_2YghXhdweaI6ngQMAox7HNcNKtUt3n6RFUa2AQF8R0eQKfie_Y8j97aVLaGFC_Y6_e6xxWPsGNPXV_K8_r50nRAW_uslhtOXKE51knU_MNo37RsLClFuVPUn0WsomKBTMQ7UsN2HCE9uSgUmzHQ0M1zW8HZTAHhL-rNLpqoL7QJojjzePw2y_jXi_cTYVgNsog31KdBn31SfQbqy6JaeWf3-uhGxxpnXcqKZYI_dltx"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">日式内酯豆腐</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-caps text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                  已过期 (请检查)
+                </span>
+</div>
+<div class="font-body-sm text-body-sm text-error mt-0.5">
+                已超预估期 1 天 · 建议打开包装检查气味与质地，或点击快速清理出库
+              </div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
+<button class="discard-btn h-9 px-3 rounded-full bg-tertiary-fixed/60 hover:bg-tertiary-fixed text-tertiary font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+<span>确认清理</span>
+</button>
+<button class="mark-done-btn h-9 px-3 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">done</span>
+<span>仍食用划扣</span>
+</button>
+</div>
+</div>
+<div class="inventory-card bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-category="fridge" data-status="fresh">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Fresh hydroponic butterhead lettuce in clean packaging, vibrant green crisp leaves with water drops, professional bright kitchen countertop photography, clinical freshness" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw9NpGK3VSFWSnOgnzapPSRoz2ipAG7wwu7xBobeN2RcGWHpNbn_d9GXq8BRVuaka6mk-9hpOIJ7VXl-kaP19XCZvSUjCCS5MyUsXYz-nJRMoPtFFQwOcW-UUUztn7cQCrmbUREyDPzEjcPnVm4vOsOVYxhpEUKGVzgNtZiJ1BFbsZbNv2ed6u4L1fMZsfLgJAcT9euqSFsKBBeMCl4_Xjt8TW2ZX1OzClmKh6oyRZqwEEkWNPPWGv"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">水培奶油生菜</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-caps text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                  充足 (剩余 5 天)
+                </span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                冷藏中层 · 1包 · 推荐制作沙拉或轻食夹馅
+              </div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
+<button class="mark-done-btn h-9 px-3.5 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>划扣一份</span>
+</button>
+</div>
+</div>
+<div class="inventory-card bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-category="fridge" data-status="fresh">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Fresh crisp small Dutch cucumbers stacked cleanly on high key kitchen surface, natural soft day illumination, vivid organic green peel, studio culinary shot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA320zRiyoiKzZYCHu766LG8hyvZzAngMAHiz-4na4pRKP3n5Ld_3txzZDXdsfwxfb0AGymQV0OdhQHj6Y9wyH6POaC9WSXqbvR-ChwIfMF0u5hg1fJij5Y5LHKXYs4bwuSsrz9UAPIykbE114Qvtox_RIVQCtBWiYT2IvOjTW1w3axt7ixF85b0psZ8RQT_3vexqhaBvnwg2Eky97vLfK2LAz7YGzqfvsz-A1aPzCBJHofh5gLBKxw"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">荷兰小黄瓜</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-caps text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                  充足 (剩余 6 天)
+                </span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                冷藏保鲜仓 · 4根 · 水分充盈状态
+              </div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
+<button class="mark-done-btn h-9 px-3.5 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>划扣一份</span>
+</button>
+</div>
+</div>
+<div class="inventory-card bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-category="freezer" data-status="fresh">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Grain fed Angus sirloin beef steak in vacuum seal skin-pack, premium marbling, cool high-end culinary photography, clean lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDy8LcpdvzSvPyC0ULWe0Yh38uIbnTIb3Hnl5sSazxe49vljrJuC8REfOEBAhi3uRUOmPT95Oadk53xUcscHiCq-GqdLG2cM9COOd3Im2QyM4edIIy8xqLDTc4OmHf5PRNoZXn1PBqwkYfs09vw5F730YuFoQfkbyUZKpjSYAf5EaMK4AOhPnStRmyb7MxJUAONUdAvrtQxUferhEUGJCL3bqF_cZinMnG9kRlbmHD7jOzoQSVpGA1b"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">谷饲安格斯西冷牛排</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-caps text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                  冷冻宜食 80 天
+                </span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                冷冻上层 · 2份 · 建议烹饪前12小时移至冷藏缓慢解冻
+              </div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
+<button class="mark-done-btn h-9 px-3.5 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>取用解冻</span>
+</button>
+</div>
+</div>
+<div class="inventory-card bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-space-md" data-category="pantry" data-status="fresh">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex-shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="Dark green glass bottle of extra virgin olive oil standing proudly in clean organized minimalist pantry, golden light, organic kitchen aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3J3-_Ab5iDmj4D7Y3rlugy-eXlLek1ItPjWufUhLdeYDQbMw9LK5LKyVjvaRmvXBLIbSUmSgBdBYwbezZNeOvXwKX9CHd6tGL0pw2nCD6NVOh7ZPOi1QnpAVsbexVnNeba1PNunQi9JuCvo2KI-knc_ZOSfVMMbO0WTgRs7GVvnJ6Eb0qmh2L28lrGTalG5ejnpq1V7MdjfAZYauZGPssGMKGBFdMGdK8Pw_RgYjR5Cnerlr1jThx"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">特级初榨橄榄油</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface font-label-caps text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                  常温 · 余量 90%
+                </span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                调味品架 · 750ml · 避光防潮贮存良好
+              </div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
+<button class="mark-done-btn h-9 px-3.5 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-label-pill text-label-pill flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+<span>更新余量</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-space-md">
+<div class="bg-surface-container-lowest rounded-2xl p-space-md lg:p-space-lg shadow-sm flex flex-col justify-between">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+<span class="font-headline-sm text-headline-sm">食刻消耗建议</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            检测到 <span class="font-semibold text-on-surface">普罗旺斯西红柿</span> 与 <span class="font-semibold text-on-surface">农家鲜鸡蛋</span> 同时处于临期窗口，今晚可直接制作“双鲜番茄滑蛋”，耗时仅 10 分钟，即可实现临期食材清零。
+          </p>
+</div>
+<div class="mt-space-md pt-space-sm flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">耗时: 10 分钟</span>
+<a class="font-label-pill text-label-pill text-primary font-semibold hover:underline flex items-center gap-1" data-path="cooking-walkthrough" href="#">
+            查看烹饪指引 <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl p-space-md lg:p-space-lg shadow-sm flex flex-col justify-between">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-[20px]">nest_farsight_weather</span>
+<span class="font-headline-sm text-headline-sm">保鲜环境智能感知</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            根据顾医生家庭 3 人饮食常态，绿叶蔬菜平均消耗耗时 3.1 天，冷冻牛排周转 14 天。当前无积压滞留风险。
+          </p>
+</div>
+<div class="mt-space-md pt-space-sm flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">食材浪费指数: 1.8%</span>
+<span class="font-label-caps text-label-caps text-primary font-semibold">远优于同城平均 (12%)</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl p-space-md lg:p-space-lg shadow-sm flex flex-col justify-between">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-[20px]">share</span>
+<span class="font-headline-sm text-headline-sm">家庭协同状态</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            主厨（顾医生）与家庭成员同步在线。最新入库：特级初榨橄榄油（昨天 19:40 由手机拍照录入）。
+          </p>
+</div>
+<div class="mt-space-md pt-space-sm flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">设备联通: 3 台手机已配对</span>
+<span class="font-label-caps text-label-caps text-primary font-semibold">云端即时同步</span>
+</div>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 z-50 bg-on-surface/40 backdrop-blur-sm hidden items-center justify-center p-4" id="quick-add-modal">
+<div class="bg-surface-container-lowest rounded-2xl p-space-lg max-w-md w-full shadow-2xl flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">手动速记食材</h2>
+<button class="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface" id="close-modal-btn">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div>
+<label class="font-body-sm text-body-sm text-on-surface-variant block mb-1">食材品名</label>
+<input class="w-full h-10 px-3.5 rounded-xl bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all" id="manual-item-name" placeholder="例如：鲜牛奶、西葫芦..." type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-space-sm">
+<div>
+<label class="font-body-sm text-body-sm text-on-surface-variant block mb-1">存放分区</label>
+<select class="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20" id="manual-item-zone">
+<option value="fridge">冷藏室</option>
+<option value="freezer">冷冻室</option>
+<option value="pantry">常温储物</option>
+</select>
+</div>
+<div>
+<label class="font-body-sm text-body-sm text-on-surface-variant block mb-1">保质期预估</label>
+<select class="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20" id="manual-item-days">
+<option value="3">3 天内</option>
+<option selected="" value="7">7 天</option>
+<option value="15">15 天</option>
+<option value="30">30 天以上</option>
+</select>
+</div>
+</div>
+<div>
+<label class="font-body-sm text-body-sm text-on-surface-variant block mb-1">数量 / 规格</label>
+<input class="w-full h-10 px-3.5 rounded-xl bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all" id="manual-item-qty" placeholder="例如：2 盒 / 500g" type="text"/>
+</div>
+</div>
+<div class="flex items-center justify-end gap-space-sm mt-space-xs">
+<button class="h-10 px-4 rounded-full bg-surface-container-high text-on-surface font-label-pill text-label-pill hover:bg-surface-container transition-colors" id="cancel-modal-btn">取消</button>
+<button class="h-10 px-5 rounded-full bg-primary text-on-primary font-label-pill text-label-pill hover:bg-primary-container transition-colors shadow-sm" id="save-modal-btn">保存入库</button>
+</div>
+</div>
+</div>
+<div class="fixed bottom-20 md:bottom-8 right-6 z-50 bg-on-surface text-surface px-4 py-2.5 rounded-full shadow-lg font-body-sm text-body-sm flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2" id="toast-message">
+<span class="material-symbols-outlined text-primary-fixed text-[18px]">check_circle</span>
+<span id="toast-text">食材已快速划扣</span>
+</div>
+<script>
+    (function() {
+      const filterTabs = document.querySelectorAll('.filter-tab');
+      const cards = document.querySelectorAll('.inventory-card');
+      const toast = document.getElementById('toast-message');
+      const toastText = document.getElementById('toast-text');
+
+      function showToast(text) {
+        toastText.textContent = text;
+        toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+        }, 2200);
+      }
+
+      filterTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          filterTabs.forEach(t => {
+            t.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
+            t.classList.add('text-on-surface-variant');
+          });
+          tab.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
+          tab.classList.remove('text-on-surface-variant');
+
+          const filter = tab.getAttribute('data-filter');
+          cards.forEach(card => {
+            if (filter === 'all') {
+              card.style.display = 'flex';
+            } else if (filter === 'expiring') {
+              if (card.getAttribute('data-status') === 'urgent' || card.getAttribute('data-status') === 'expired') {
+                card.style.display = 'flex';
+              } else {
+                card.style.display = 'none';
+              }
+            } else {
+              if (card.getAttribute('data-category') === filter) {
+                card.style.display = 'flex';
+              } else {
+                card.style.display = 'none';
+              }
+            }
+          });
+        });
+      });
+
+      document.querySelectorAll('.mark-done-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const card = e.target.closest('.inventory-card');
+          const title = card.querySelector('.truncate').textContent.trim();
+          card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+          card.style.opacity = '0.4';
+          card.style.transform = 'scale(0.98)';
+          setTimeout(() => {
+            card.remove();
+            showToast('已划扣库存: ' + title);
+          }, 300);
+        });
+      });
+
+      document.querySelectorAll('.discard-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const card = e.target.closest('.inventory-card');
+          card.remove();
+          showToast('已清理出库');
+        });
+      });
+
+      const modal = document.getElementById('quick-add-modal');
+      const quickAddBtn = document.getElementById('quick-add-btn');
+      const closeModalBtn = document.getElementById('close-modal-btn');
+      const cancelModalBtn = document.getElementById('cancel-modal-btn');
+      const saveModalBtn = document.getElementById('save-modal-btn');
+      const manualName = document.getElementById('manual-item-name');
+
+      quickAddBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        manualName.focus();
+      });
+
+      function closeModal() {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+        manualName.value = '';
+      }
+
+      closeModalBtn.addEventListener('click', closeModal);
+      cancelModalBtn.addEventListener('click', closeModal);
+
+      saveModalBtn.addEventListener('click', () => {
+        const val = manualName.value.trim();
+        if (!val) return;
+        showToast('已新增食材: ' + val);
+        closeModal();
+      });
+    })();
+  </script>
+</div></main></div><nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_-1px_8px_rgba(0,0,0,0.06)] z-40 flex items-center justify-around px-space-xs" data-active-classes="text-primary font-semibold"><a class="flex flex-col items-center justify-center flex-1 py-1 text-on-surface-variant hover:text-on-surface transition-colors" data-path="daily-inspiration" href="#"><span class="material-symbols-outlined text-[20px]">auto_awesome</span><span class="font-body-sm text-body-sm mt-0.5">今日灵感</span></a><a class="flex flex-col items-center justify-center flex-1 py-1 text-on-surface-variant hover:text-on-surface transition-colors" data-path="camera-ingestion" href="#"><span class="material-symbols-outlined text-[20px]">photo_camera</span><span class="font-body-sm text-body-sm mt-0.5">拍照入库</span></a><a aria-current="page" class="flex flex-col items-center justify-center flex-1 py-1 transition-colors text-primary font-semibold" data-path="food-inventory" href="#"><span class="material-symbols-outlined text-[20px]">kitchen</span><span class="font-body-sm text-body-sm mt-0.5">食材库存</span></a><a class="flex flex-col items-center justify-center flex-1 py-1 text-on-surface-variant hover:text-on-surface transition-colors" data-path="cooking-walkthrough" href="#"><span class="material-symbols-outlined text-[20px]">menu_book</span><span class="font-body-sm text-body-sm mt-0.5">分步下厨</span></a></nav></body></html>

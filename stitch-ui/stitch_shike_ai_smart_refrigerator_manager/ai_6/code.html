@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><title>食刻 AI</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#faf8ff;}body{overscroll-behavior:none;-webkit-font-smoothing:antialiased;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "inverse-on-surface": "#eef0ff", "surface-container-highest": "#dae2fd", "error": "#ba1a1a", "on-surface": "#131b2e", "on-tertiary": "#ffffff", "secondary-fixed": "#ffddb8", "outline": "#6d7a72", "on-primary-container": "#f5fff7", "tertiary-fixed": "#ffdad7", "surface-container-low": "#f2f3ff", "secondary-fixed-dim": "#ffb95f", "tertiary-container": "#da3437", "on-error-container": "#93000a", "primary-container": "#00855d", "inverse-primary": "#68dba9", "on-secondary-container": "#684000", "on-tertiary-fixed-variant": "#930013", "on-surface-variant": "#3d4a42", "on-primary-fixed": "#002114", "tertiary-fixed-dim": "#ffb3ad", "primary-fixed-dim": "#68dba9", "inverse-surface": "#283044", "surface-dim": "#d2d9f4", "outline-variant": "#bccac0", "surface-container-high": "#e2e7ff", "background": "#faf8ff", "tertiary": "#b61722", "secondary-container": "#fea619", "on-secondary": "#ffffff", "on-secondary-fixed": "#2a1700", "error-container": "#ffdad6", "surface-bright": "#faf8ff", "on-primary-fixed-variant": "#005137", "surface-container": "#eaedff", "surface-tint": "#006c4a", "on-primary": "#ffffff", "surface-variant": "#dae2fd", "primary": "#006948", "on-secondary-fixed-variant": "#653e00", "surface": "#faf8ff", "on-background": "#131b2e", "on-tertiary-container": "#fffbff", "secondary": "#855300", "surface-container-lowest": "#ffffff", "on-error": "#ffffff", "primary-fixed": "#85f8c4", "on-tertiary-fixed": "#410004" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-xl": "2rem", "space-sm": "0.5rem", "space-xs": "0.25rem", "space-lg": "1.5rem", "gutter-mobile": "0.75rem", "space-md": "1rem", "margin-mobile": "1rem", "gutter": "1.5rem", "space-2xl": "3rem", "margin": "2rem" }, fontFamily: { "headline-lg-mobile": ["Inter"], "headline-lg": ["Inter"], "headline-md": ["Inter"], "label-caps": ["Inter"], "metric-headline": ["Inter"], "display": ["Inter"], "body-sm": ["Inter"], "headline-sm": ["Inter"], "body-md": ["Inter"], "label-pill": ["Inter"], "body-lg": ["Inter"] }, fontSize: { "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}], "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "label-caps": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}], "metric-headline": ["24px", {"lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "700"}], "display": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "600"}], "body-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.005em", "fontWeight": "400"}], "headline-sm": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400"}], "label-pill": ["12px", {"lineHeight": "16px", "letterSpacing": "-0.005em", "fontWeight": "500"}], "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "400"}] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen flex flex-col antialiased"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.03)]"><div class="px-5 pt-1 flex items-center justify-between"><span class="font-label-caps text-label-caps text-on-surface font-semibold tracking-tight">9:41</span><div class="h-6 w-28 bg-on-surface rounded-full flex items-center justify-end px-2 gap-1.5 shadow-sm"><div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div><div class="w-2.5 h-2.5 rounded-full bg-surface-container-highest/40"></div></div><div class="flex items-center gap-1.5 text-on-surface"><span class="material-symbols-outlined text-[14px]">signal_cellular_alt</span><span class="material-symbols-outlined text-[14px]">wifi</span><span class="material-symbols-outlined text-[16px]">battery_full</span></div></div><div class="h-14 px-4 flex items-center justify-between gap-3"><div class="flex items-center gap-2 min-w-0 flex-1"><button class="w-11 h-11 -ml-1 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[22px]">arrow_back_ios_new</span></button><img alt='Minimalist modern brand mark icon for "Shike AI (食刻 AI)". Geometric fresh emerald green (#059669) emblem combining a stylized smart refrigerator outline with a delicate culinary sprout / clock tick indicator. Apple HIG aesthetic, clean vector line precision, white and emerald green contrast, flat modern graphic icon on crisp white background.. Design context: - Primary color: #059669
+- Font: inter
+- Mode: light
+- Roundness: rounded-md
+. The logo should be visually consistent with these brand tokens.' class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1UslSgAIb7ktSYbSH6jnFoOFgd5gssy332V0CUw28mqCJBstVgafSS2_iAw3pM0axtXMBOl82jYdjhHsEuVwIDAi61dKbwTdLkfmX4ecERqFlVa4Fa5Axq1FQsZZPbY7oG2jeDmWuRDoZT2EWqyGENAeSPQiT-FaEgTfAafAIskawI0_rIXeKw1z7MqQa8TP2ahQqbJ21nuQjIia8QJgBbrenGNcvnp5OzyIkR2aJfik47gIIlq8elCc9U"/><div class="flex flex-col min-w-0"><h1 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight truncate">Vision Scan</h1><span class="font-body-sm text-body-sm text-on-surface-variant truncate">食刻 AI · 膳食管家</span></div></div><div class="flex items-center gap-2 flex-shrink-0"><button class="w-9 h-9 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface-variant hover:text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-colors"><span class="material-symbols-outlined text-[20px]">more_horiz</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-14 pb-safe px-4 bg-surface"><div class="flex flex-col w-full relative">
+<!-- Viewport Section (Simulated Smart Fridge Camera Viewfinder) -->
+<div class="relative w-full h-[320px] rounded-2xl overflow-hidden bg-on-surface shadow-md">
+<div class="w-full h-full bg-cover bg-center" data-alt="Photorealistic first-person interior view of an impeccably clean, illuminated domestic French-door refrigerator filled with fresh organized produce, crisp glass shelves with cool 4K ambient lighting, juicy red vine tomatoes in a clear bin, organic egg carton, and fresh cabbage in vegetable drawer, professional food photography aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCjnQdDBGqpFIIR2V5V3xcqcUmgw1ZbJm1cjhT2XtHeBiOQblGeq2cscbouYw-zXHMcnRvk7e9c13rDFRkxjqAVSlEsu7D7UnEKyZNVpDHow1-iuKX1-FZTzpv76GaCqHkVQaQc654tKw1c4Ruh1XjyY5u4wE_nhoS1J77ZzB-qBzzAD3YaPHWxwHEvNpDnC0sOM3nQQe1X6W1V5btdMea4u8k3j1iu6lAst6mvnrV9InvD_jeb-azb')">
+<!-- Dark Vignette & Optical Tint Overlay -->
+<div class="absolute inset-0 bg-gradient-to-b from-on-surface/70 via-transparent to-on-surface/85 pointer-events-none"></div>
+<!-- Top Overlay Controls & Telemetry -->
+<div class="absolute top-3 inset-x-3 flex items-center justify-between z-10">
+<!-- Status Badge -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-inverse-surface/80 backdrop-blur-md shadow-sm">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-caps text-label-caps text-inverse-on-surface tracking-wider">SHIKE-VISION AI · 98.4% · 4K HDR</span>
+</div>
+<!-- Camera Actions -->
+<div class="flex items-center gap-1.5">
+<button class="w-8 h-8 rounded-full bg-inverse-surface/70 backdrop-blur-md flex items-center justify-center text-inverse-on-surface active:scale-95 transition-transform" id="flash-btn">
+<span class="material-symbols-outlined text-[17px]">flash_on</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-inverse-surface/70 backdrop-blur-md flex items-center justify-center text-inverse-on-surface active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[17px]">center_focus_strong</span>
+</button>
+</div>
+</div>
+<!-- Laser Bounding Box Target 1: Vine Tomatoes -->
+<div class="absolute top-16 left-5 w-28 h-24 rounded-lg bg-primary/10 shadow-sm flex flex-col justify-between p-1.5 animate-pulse">
+<div class="flex justify-between items-start">
+<span class="w-2 h-2 rounded-tl-sm bg-primary-fixed"></span>
+<span class="w-2 h-2 rounded-tr-sm bg-primary-fixed"></span>
+</div>
+<div class="self-start px-1.5 py-0.5 rounded bg-on-surface/90 backdrop-blur-sm flex items-center gap-1 shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span>
+<span class="font-label-caps text-label-caps text-inverse-on-surface">西红柿 · 3个 · 99%</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="w-2 h-2 rounded-bl-sm bg-primary-fixed"></span>
+<span class="w-2 h-2 rounded-br-sm bg-primary-fixed"></span>
+</div>
+</div>
+<!-- Laser Bounding Box Target 2: Eggs -->
+<div class="absolute top-14 right-6 w-32 h-20 rounded-lg bg-primary/10 shadow-sm flex flex-col justify-between p-1.5">
+<div class="flex justify-between items-start">
+<span class="w-2 h-2 rounded-tl-sm bg-primary-fixed"></span>
+<span class="w-2 h-2 rounded-tr-sm bg-primary-fixed"></span>
+</div>
+<div class="self-end px-1.5 py-0.5 rounded bg-on-surface/90 backdrop-blur-sm flex items-center gap-1 shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span>
+<span class="font-label-caps text-label-caps text-inverse-on-surface">鲜鸡蛋 · 6枚 · 储蛋盒</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="w-2 h-2 rounded-bl-sm bg-primary-fixed"></span>
+<span class="w-2 h-2 rounded-br-sm bg-primary-fixed"></span>
+</div>
+</div>
+<!-- Laser Bounding Box Target 3: Cabbage -->
+<div class="absolute bottom-12 left-10 w-36 h-20 rounded-lg bg-secondary-container/15 shadow-sm flex flex-col justify-between p-1.5">
+<div class="flex justify-between items-start">
+<span class="w-2 h-2 rounded-tl-sm bg-secondary-fixed"></span>
+<span class="w-2 h-2 rounded-tr-sm bg-secondary-fixed"></span>
+</div>
+<div class="self-start px-1.5 py-0.5 rounded bg-on-surface/90 backdrop-blur-sm flex items-center gap-1 shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-fixed"></span>
+<span class="font-label-caps text-label-caps text-inverse-on-surface">娃娃菜 · 建议尽快食用</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="w-2 h-2 rounded-bl-sm bg-secondary-fixed"></span>
+<span class="w-2 h-2 rounded-br-sm bg-secondary-fixed"></span>
+</div>
+</div>
+<!-- Laser Bounding Box Target 4: Milk & Soy Sauce indicators -->
+<div class="absolute bottom-16 right-5 flex flex-col gap-1.5 items-end">
+<div class="px-2 py-0.5 rounded bg-on-surface/85 backdrop-blur-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-primary-fixed text-[12px]">verified</span>
+<span class="font-label-caps text-label-caps text-inverse-on-surface">特仑苏纯牛奶 · 2盒</span>
+</div>
+<div class="px-2 py-0.5 rounded bg-on-surface/85 backdrop-blur-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-primary-fixed text-[12px]">verified</span>
+<span class="font-label-caps text-label-caps text-inverse-on-surface">生抽酱油 · 1瓶</span>
+</div>
+</div>
+<!-- Live Scan Radar Wave Line -->
+<div class="absolute inset-x-0 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-primary-fixed to-transparent opacity-75 animate-bounce"></div>
+</div>
+</div>
+<!-- Bottom Sheet Container -->
+<div class="relative w-full -mt-5 pt-3 pb-8 px-4 bg-surface-container-lowest rounded-t-[28px] shadow-[0_-8px_30px_rgba(19,27,46,0.08)] z-20 flex flex-col gap-4">
+<!-- Draggable Grabber Handle -->
+<div class="w-10 h-1.5 bg-surface-container-highest rounded-full mx-auto mb-1 opacity-70"></div>
+<!-- Recognition Header Row -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">AI 识别到 5 种食材</h2>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed/30 text-on-primary-fixed font-label-pill text-label-pill flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+          准确率 98.4%
+        </span>
+</div>
+<button class="font-label-pill text-label-pill text-primary font-semibold hover:opacity-80 transition-opacity" id="toggle-all-btn">
+        全选 (<span id="selected-count">5</span>/5)
+      </button>
+</div>
+<!-- Quick Batch Action Ribbon -->
+<div class="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-container-low shadow-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">layers</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">批量指定冷藏分区</span>
+</div>
+<button class="flex items-center gap-0.5 text-primary font-label-pill text-label-pill font-medium">
+<span>全部冷藏室</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- Structured Inventory Ingestion List -->
+<div class="flex flex-col gap-2.5">
+<!-- Item 1: Tomatoes -->
+<div class="item-card p-3 rounded-2xl bg-surface-container-low shadow-sm flex items-center justify-between gap-2.5">
+<button class="item-check w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface shadow-inner">
+<img class="w-full h-full object-cover" data-alt="Close-up documentary shot of 3 red fresh vine tomatoes with green stems, soft indoor kitchen light, clean aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDm1S-UCpoHN5Wzw6HVVHjD4oSFTjK0AiWob5QfCvA_As9f4BxvouuRNuvnFUCpN9rYyDGtsVmaBdQ79ipUZA-xRVT-WIHicK01AZojdMVbRY3UBHRhO7zcA5jO8VseonbFRaBDbTjkLXgXrM9gISxShmw4Ufgmf_Ydnr2Trgsvb2e4iEJeZw493Ybil80lLtR_8gRSQSKsjlMx5atDHxQ64F4YWbTYTphjkWBAgXXAtfYI1WdpLzPb"/>
+</div>
+<div class="flex-1 min-w-0 flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">西红柿</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps">蔬菜瓜果</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">储存: 冷藏中层 (4℃)</span>
+<span class="font-label-caps text-label-caps text-primary font-medium">AI 建议: 5天内食用 (新鲜)</span>
+</div>
+<!-- Stepper -->
+<div class="flex items-center gap-1.5 bg-surface-container-lowest px-2 py-1 rounded-full shadow-sm flex-shrink-0">
+<button class="step-down w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">remove</span>
+</button>
+<span class="quantity-val font-label-pill text-label-pill text-on-surface font-semibold w-6 text-center tabular-nums">3个</span>
+<button class="step-up w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">add</span>
+</button>
+</div>
+</div>
+<!-- Item 2: Fresh Eggs -->
+<div class="item-card p-3 rounded-2xl bg-surface-container-low shadow-sm flex items-center justify-between gap-2.5">
+<button class="item-check w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface shadow-inner">
+<img class="w-full h-full object-cover" data-alt="Brown organic farm fresh chicken eggs resting in a clean modern refrigerator egg holder, bright natural kitchen lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpv0pAr7omwF2OTr52vtucIYNfXFhKGTWBoSfgovDqPS1Rm7xYXDnx2S7-st2_sAku_JkNgu6piCE5UBYhY134DsZgpVkhArGZWAIBxJFLPIFsc90zzU8bjLY8bxvyIWqxL0GojWWTVWrAIRDXC90SHTk2vl36okiO3KeuZx8F7e3x6Hj7iE3W2V4mVl0i3jigxrdZtP3wKOwZZAAsOkrvTuZzSpf9Wmph7iGxCY5rQgowOKfdLA4e"/>
+</div>
+<div class="flex-1 min-w-0 flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">鲜鸡蛋</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps">蛋禽奶制</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">储存: 门架储蛋盒</span>
+<span class="font-label-caps text-label-caps text-primary font-medium">AI 建议: 15天内食用 (新鲜)</span>
+</div>
+<div class="flex items-center gap-1.5 bg-surface-container-lowest px-2 py-1 rounded-full shadow-sm flex-shrink-0">
+<button class="step-down w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">remove</span>
+</button>
+<span class="quantity-val font-label-pill text-label-pill text-on-surface font-semibold w-6 text-center tabular-nums">6枚</span>
+<button class="step-up w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">add</span>
+</button>
+</div>
+</div>
+<!-- Item 3: Baby Cabbage (Expiring Warning) -->
+<div class="item-card p-3 rounded-2xl bg-surface-container-low shadow-sm flex items-center justify-between gap-2.5">
+<button class="item-check w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface shadow-inner">
+<img class="w-full h-full object-cover" data-alt="Fresh crisp baby Napa cabbage wrapped in minimal biodegradable clear food film, high-key studio lighting on crisp clean background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7Q979s7ipnv30c2m5Av9iY4wUHI00QESxu4WBDwhhfsAlrbgrxh5p9DVRCTWToLjP-5XLXVQwVb_FoNQX6827am388A4nHhn9egbY7kGEmEI36m_uzPtiAz_2_hMKME6ZkSJifhZqMJe-2sJnRBWamsqLJa3wABgi5epUd-a9YNcoQ2-HI-rnU3KmwWhtH0bCpoI0g85bJ3TBO349O9--_FQQxXsFVOvM4tNFQtKRHw2fhMYjrZ24"/>
+</div>
+<div class="flex-1 min-w-0 flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">娃娃菜</span>
+<span class="px-1.5 py-0.2 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-caps text-label-caps">建议尽早</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">储存: 蔬菜保鲜抽屉</span>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="font-label-caps text-label-caps text-secondary font-semibold">临期注意: 建议4天内料理</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 bg-surface-container-lowest px-2 py-1 rounded-full shadow-sm flex-shrink-0">
+<button class="step-down w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">remove</span>
+</button>
+<span class="quantity-val font-label-pill text-label-pill text-on-surface font-semibold w-6 text-center tabular-nums">1包</span>
+<button class="step-up w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">add</span>
+</button>
+</div>
+</div>
+<!-- Item 4: Deluxe Soy Sauce -->
+<div class="item-card p-3 rounded-2xl bg-surface-container-low shadow-sm flex items-center justify-between gap-2.5">
+<button class="item-check w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface shadow-inner">
+<img class="w-full h-full object-cover" data-alt="Glass bottle of premium naturally brewed Japanese soy sauce condiment on clean shelf, natural highlights, culinary studio style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgrmvvc5DS_XMTD4ux0YHZdxBKKQJ-4dVhjDRl7JHx1eD1UtIQ4L3zNHa3eh8oK29ToLuSHElr-U6zt9LZH47iriz_Mz1MuZLoJTQhMRU-H-k78b4S95umW8CXs8_z5dRCJhdMj7mQMu4MRV2vG-WqgPYqZnxABZL6my2hg_7qGWAr4uIwgUcnDuuySkkfUxWmXhrpv7YeLYDW-FDGzwASdEBCAyIexnbFNwbX3izHyzeg5wX5m-Li"/>
+</div>
+<div class="flex-1 min-w-0 flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">生抽酱油</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps">常备调味</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">储存: 冰箱门侧下层</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">常规保鲜期: 180天</span>
+</div>
+<div class="flex items-center gap-1.5 bg-surface-container-lowest px-2 py-1 rounded-full shadow-sm flex-shrink-0">
+<button class="step-down w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">remove</span>
+</button>
+<span class="quantity-val font-label-pill text-label-pill text-on-surface font-semibold w-6 text-center tabular-nums">1瓶</span>
+<button class="step-up w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">add</span>
+</button>
+</div>
+</div>
+<!-- Item 5: Telunsu Pure Milk -->
+<div class="item-card p-3 rounded-2xl bg-surface-container-low shadow-sm flex items-center justify-between gap-2.5">
+<button class="item-check w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</button>
+<div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface shadow-inner">
+<img class="w-full h-full object-cover" data-alt="Two neat cartons of premium whole milk standing cold on clear glass refrigerator shelf with gentle condensation droplets" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZ-kPG70_aEhhzF5VVf-W0GrPvohTFcVk8czeUoBpPL5d7skAfMSFFgXYiCYc7Q7Kk-XmJuZ7ty5t1YinXflKqdmd5DTR4tOPpRe1uaC0g8oRYBY7duCi27kFzIjuJ64n6cc_U2p9FU0O2bY3bqOZP5unL-v6vxm6zjWTzXL3ZjCX_FLXgUrP2Qu99OLOOaFbtHiMFP64XqpnUGMwKOIzVRU_EY3BwAZJbm5Gm2YL1lEy-MG6jyv0n"/>
+</div>
+<div class="flex-1 min-w-0 flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">特仑苏纯牛奶</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps">乳品饮料</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">储存: 冷藏上层</span>
+<span class="font-label-caps text-label-caps text-primary font-medium">建议冷藏 7天内饮用</span>
+</div>
+<div class="flex items-center gap-1.5 bg-surface-container-lowest px-2 py-1 rounded-full shadow-sm flex-shrink-0">
+<button class="step-down w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">remove</span>
+</button>
+<span class="quantity-val font-label-pill text-label-pill text-on-surface font-semibold w-6 text-center tabular-nums">2盒</span>
+<button class="step-up w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[15px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Notification Toggle Panel -->
+<div class="mt-1 p-3 rounded-2xl bg-surface-container-low flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-xl bg-primary-fixed/40 flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">notifications_active</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface font-medium">智能保鲜与临期预警</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">提前 48 小时微信及推送智能提醒</span>
+</div>
+</div>
+<!-- iOS Pill Switch -->
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-inner"></div>
+</label>
+</div>
+<!-- Sticky Confirmation CTA -->
+<div class="pt-2">
+<button class="w-full h-12 rounded-2xl bg-primary text-on-primary font-label-pill text-label-pill font-semibold shadow-md active:scale-[0.99] transition-transform flex items-center justify-center gap-2" id="submit-ingestion">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+<span id="submit-btn-text">确认添加入库 (选定 5 件食材) · 预估 1,420 kcal</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const checks = document.querySelectorAll('.item-check');
+    const selectedCountEl = document.getElementById('selected-count');
+    const submitBtnText = document.getElementById('submit-btn-text');
+    const toggleAllBtn = document.getElementById('toggle-all-btn');
+    let allSelected = true;
+
+    function updateCount() {
+      let count = 0;
+      checks.forEach(c => {
+        if (c.dataset.checked !== 'false') count++;
+      });
+      selectedCountEl.textContent = count;
+      submitBtnText.textContent = `确认添加入库 (选定 ${count} 件食材) · 预估 ${count * 284} kcal`;
+    }
+
+    checks.forEach(check => {
+      check.addEventListener('click', () => {
+        const isChecked = check.dataset.checked !== 'false';
+        if (isChecked) {
+          check.dataset.checked = 'false';
+          check.className = 'item-check w-5 h-5 rounded-full bg-surface-container-highest text-transparent flex items-center justify-center flex-shrink-0';
+        } else {
+          check.dataset.checked = 'true';
+          check.className = 'item-check w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0';
+        }
+        updateCount();
+      });
+    });
+
+    toggleAllBtn.addEventListener('click', () => {
+      allSelected = !allSelected;
+      checks.forEach(check => {
+        check.dataset.checked = allSelected ? 'true' : 'false';
+        if (allSelected) {
+          check.className = 'item-check w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0';
+        } else {
+          check.className = 'item-check w-5 h-5 rounded-full bg-surface-container-highest text-transparent flex items-center justify-center flex-shrink-0';
+        }
+      });
+      toggleAllBtn.innerHTML = allSelected ? '全选 (<span id="selected-count">5</span>/5)' : '全选 (<span id="selected-count">0</span>/5)';
+      updateCount();
+    });
+
+    // Simple Quantity Stepper feedback
+    document.querySelectorAll('.item-card').forEach(card => {
+      const up = card.querySelector('.step-up');
+      const down = card.querySelector('.step-down');
+      const val = card.querySelector('.quantity-val');
+      if (up && down && val) {
+        up.addEventListener('click', () => {
+          let num = parseInt(val.textContent) || 1;
+          const unit = val.textContent.replace(/[0-9]/g, '') || '个';
+          val.textContent = (num + 1) + unit;
+        });
+        down.addEventListener('click', () => {
+          let num = parseInt(val.textContent) || 1;
+          const unit = val.textContent.replace(/[0-9]/g, '') || '个';
+          if (num > 1) {
+            val.textContent = (num - 1) + unit;
+          }
+        });
+      }
+    });
+
+    // Flash button micro-interaction
+    const flashBtn = document.getElementById('flash-btn');
+    let flashOn = true;
+    if (flashBtn) {
+      flashBtn.addEventListener('click', () => {
+        flashOn = !flashOn;
+        flashBtn.querySelector('span').textContent = flashOn ? 'flash_on' : 'flash_off';
+      });
+    }
+  })();
+</script></main></body></html>

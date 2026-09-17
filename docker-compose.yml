@@ -1,0 +1,40 @@
+services:
+  shike-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shike-api
+    restart: always
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      - PORT=8081
+      - CPA_URL=http://cli-proxy-api:5201/v1
+      - CPA_API_KEY=${CPA_API_KEY}
+      - DB_PATH=/opt/shike-ai/data/db/shike.db
+    volumes:
+      - /opt/shike-ai/data:/opt/shike-ai/data
+    networks:
+      - default
+      - cliproxyapi_default
+
+  shike-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shike-web
+    restart: always
+    ports:
+      - "127.0.0.1:3002:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      - shike-api
+    networks:
+      - default
+
+networks:
+  default:
+  cliproxyapi_default:
+    external: true
