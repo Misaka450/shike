@@ -10,6 +10,7 @@ import {
   generateAiRecipes,
   getCookingHistory,
   getRecipeById,
+  isRecipeVisibleTo,
   listRecipes,
   recommendRecipes,
   RecipeError,
@@ -20,11 +21,12 @@ export const recipesRoute = new Hono<AppEnv>();
 // 【安全修复 SEC-01】路由组统一鉴权，身份只从服务端会话读取
 recipesRoute.use('*', requireAuth);
 
-// GET / - List all recipes
+// GET / - List all recipes（内置菜谱 + 当前用户自己的 AI 菜谱）
 recipesRoute.get('/', (c) => {
+  const userId = c.get('userId');
   const cuisine = c.req.query('cuisine');
   const difficulty = c.req.query('difficulty');
-  const recipes = listRecipes({ cuisine, difficulty });
+  const recipes = listRecipes({ cuisine, difficulty }, userId);
   return c.json({
     success: true,
     data: recipes,
@@ -42,9 +44,13 @@ recipesRoute.get('/history', (c) => {
   });
 });
 
-// GET /:id - Get recipe details
+// GET /:id - Get recipe details（AI 菜谱仅生成者本人可查看）
 recipesRoute.get('/:id', (c) => {
+  const userId = c.get('userId');
   const id = c.req.param('id');
+  if (!isRecipeVisibleTo(id, userId)) {
+    return c.json({ success: false, code: 'NOT_FOUND', error: '菜谱不存在' }, 404);
+  }
   const recipe = getRecipeById(id);
   if (!recipe) {
     return c.json({ success: false, code: 'NOT_FOUND', error: '菜谱不存在' }, 404);
@@ -55,11 +61,12 @@ recipesRoute.get('/:id', (c) => {
   });
 });
 
-// DELETE /:id - Delete AI recipe
+// DELETE /:id - Delete AI recipe（仅限该菜谱的生成者本人）
 recipesRoute.delete('/:id', (c) => {
+  const userId = c.get('userId');
   const id = c.req.param('id');
   try {
-    deleteRecipe(id);
+    deleteRecipe(id, userId);
     return c.json({
       success: true,
       message: '菜谱已删除',
@@ -186,7 +193,7 @@ recipesRoute.post('/ai-generate', async (c) => {
   }
 
   try {
-    const aiRecipes = await generateAiRecipes(inventory, preference, count);
+    const aiRecipes = await generateAiRecipes(userId, inventory, preference, count);
     if (aiRecipes.length === 0) {
       return c.json(
         { success: false, code: 'AI_GENERATION_FAILED', error: 'AI 大厨暂时无法提供服务，请稍后重试' },

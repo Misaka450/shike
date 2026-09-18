@@ -68,7 +68,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
       })
     );
 
-    const result = await generateAiRecipes([makeInventoryItem('西红柿')], undefined, 3);
+    const result = await generateAiRecipes('usr_test', [makeInventoryItem('西红柿')], undefined, 3);
 
     assert.equal(result.length, 3);
     assert.ok(result[0].name.includes('菜A'));
@@ -78,7 +78,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
   it('模型只返回单个菜谱对象时应能兼容（自动包装为数组）', async () => {
     mockCpaResponse(JSON.stringify(makeRecipeJson('独苗菜')));
 
-    const result = await generateAiRecipes([makeInventoryItem('西红柿')], undefined, 3);
+    const result = await generateAiRecipes('usr_test', [makeInventoryItem('西红柿')], undefined, 3);
 
     assert.equal(result.length, 1);
     assert.ok(result[0].name.includes('独苗菜'));
@@ -87,7 +87,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
   it('模型直接返回数组时应能兼容', async () => {
     mockCpaResponse(JSON.stringify([makeRecipeJson('菜A'), makeRecipeJson('菜B')]));
 
-    const result = await generateAiRecipes([makeInventoryItem('西红柿')], undefined, 3);
+    const result = await generateAiRecipes('usr_test', [makeInventoryItem('西红柿')], undefined, 3);
 
     assert.equal(result.length, 2);
   });
@@ -98,7 +98,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
       JSON.stringify({ recipes: [{ ...makeRecipeJson('坏菜'), ingredients: '西红柿' }] })
     );
 
-    const result = await generateAiRecipes([makeInventoryItem('西红柿')], undefined, 3);
+    const result = await generateAiRecipes('usr_test', [makeInventoryItem('西红柿')], undefined, 3);
 
     assert.equal(result.length, 0);
   });
@@ -108,7 +108,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
       '```json\n' + JSON.stringify({ recipes: [makeRecipeJson('围栏菜')] }) + '\n```'
     );
 
-    const result = await generateAiRecipes([makeInventoryItem('西红柿')], undefined, 3);
+    const result = await generateAiRecipes('usr_test', [makeInventoryItem('西红柿')], undefined, 3);
 
     assert.equal(result.length, 1);
   });
@@ -120,7 +120,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
       return new Response('{}');
     }) as typeof fetch;
 
-    const result = await generateAiRecipes([], undefined, 3);
+    const result = await generateAiRecipes('usr_test', [], undefined, 3);
 
     assert.equal(result.length, 0);
     assert.equal(called, false);
@@ -129,7 +129,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
   it('匹配率应按真实库存计算（同义词也算命中）', async () => {
     mockCpaResponse(JSON.stringify({ recipes: [makeRecipeJson('番茄菜')] }));
 
-    const result = await generateAiRecipes([makeInventoryItem('番茄')], undefined, 3);
+    const result = await generateAiRecipes('usr_test', [makeInventoryItem('番茄')], undefined, 3);
 
     assert.equal(result.length, 1);
     // 冰箱里的「番茄」与菜谱里的「西红柿」属同义词，应当匹配上，匹配率为 100%
@@ -148,7 +148,7 @@ describe('generateAiRecipes（AI 菜谱生成与解析）', () => {
       })
     );
 
-    const result = await generateAiRecipes([makeInventoryItem('西红柿')], undefined, 2);
+    const result = await generateAiRecipes('usr_test', [makeInventoryItem('西红柿')], undefined, 2);
 
     assert.equal(result.length, 2);
   });

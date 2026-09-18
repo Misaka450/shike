@@ -107,6 +107,27 @@ const MIGRATIONS: Array<(database: DatabaseType) => void> = [
       );
     `);
   },
+
+  // v2 -> v3：为菜谱表增加归属字段，让 AI 定制菜谱成为「用户私有内容」
+  (database) => {
+    // 内置菜谱 owner_id 为 NULL；AI 菜谱记录生成者的用户 ID
+    // SQLite 对已存在的表新增列只能用 ALTER TABLE，老用户升级时自动补齐该列
+    database.exec(`
+      ALTER TABLE recipes ADD COLUMN owner_id TEXT;
+    `);
+
+    // 存量 AI 菜谱是旧版本在「无归属」机制下生成的全局共享数据，
+    // 无法确定其真实创建者。它们本就是临时内容（旧机制还会按全局 50 条自动清理），
+    // 因此直接清除，避免出现「任何人都无权删除、也无法被新上限机制回收」的无主数据堆积。
+    // 内置菜谱（owner_id 为 NULL 的非 ai-recipe- 记录）不受影响。
+    database.exec(`
+      DELETE FROM recipes WHERE id LIKE 'ai-recipe-%';
+    `);
+
+    database.exec(`
+      CREATE INDEX IF NOT EXISTS idx_recipes_owner ON recipes (owner_id);
+    `);
+  },
 ];
 
 /**

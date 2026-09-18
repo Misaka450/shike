@@ -317,15 +317,54 @@ export function rowToRecipe(row: any): Recipe {
   };
 }
 
-export function listRecipes(filters?: { cuisine?: string; difficulty?: string }): Recipe[] {
-  // 从内存缓存读取全量菜谱，过滤在内存中完成（菜谱数量有限，比每次重新查库 + JSON 解析更划算）
+/**
+ * 列出菜谱
+ * 可见性规则（NEW-01/02 修复）：
+ * - 内置菜谱（owner_id 为 NULL）对所有人可见；
+ * - AI 定制菜谱是用户私有内容，只有其生成者（owner_id 匹配）能看到。
+ *
+ * @param filters 菜系/难度过滤
+ * @param userId  当前登录用户；传入时只返回「内置菜谱 + 该用户自己的 AI 菜谱」。
+ *                不传时只返回内置菜谱（供内部纯内置场景使用，例如推荐引擎）。
+ */
+export function listRecipes(
+  filters?: { cuisine?: string; difficulty?: string },
+  userId?: string
+): Recipe[] {
+  // 从内存缓存读取全量菜谱，归属与分类过滤在内存中完成
   return getAllRecipes().filter((recipe) => {
     if (filters?.cuisine && recipe.cuisine !== filters.cuisine) return false;
     if (filters?.difficulty && recipe.difficulty !== filters.difficulty) return false;
     return true;
+  }).filter((recipe) => {
+    // 需要查询数据库确认归属（缓存的是菜谱内容，不含 owner_id）
+    if (!recipe.id.startsWith('ai-recipe-')) return true; // 内置菜谱
+    if (!userId) return false; // 未指定用户：调用方只想要内置菜谱
+    return getRecipeOwnerId(recipe.id) === userId;
   });
 }
 
+/** 查询菜谱归属用户；内置菜谱返回 null，不存在返回 undefined */
+const ownerStmt = db.prepare('SELECT owner_id FROM recipes WHERE id = ?');
+function getRecipeOwnerId(id: string): string | null | undefined {
+  const row = ownerStmt.get(id) as { owner_id: string | null } | undefined;
+  return row ? row.owner_id : undefined;
+}
+
+/**
+ * 判断某菜谱对指定用户是否可见
+ * 内置菜谱人人可见；AI 菜谱仅生成者可见。
+ */
+export function isRecipeVisibleTo(id: string, userId: string): boolean {
+  const ownerId = getRecipeOwnerId(id);
+  if (ownerId === undefined) return false; // 菜谱不存在
+  return ownerId === null || ownerId === userId;
+}
+
+/**
+ * 读取菜谱详情（内部使用，不做归属校验）
+ * 需要对外返回时请配合 isRecipeVisibleTo 做可见性判断。
+ */
 export function getRecipeById(id: string): Recipe | null {
   const row = db.prepare('SELECT * FROM recipes WHERE id = ?').get(id);
   return row ? rowToRecipe(row) : null;
@@ -345,14 +384,25 @@ export class RecipeError extends Error {
 
 /**
  * 删除指定的 AI 菜谱
- * 安全控制：严格限制只有以 'ai-recipe-' 开头的菜谱才允许删除（若不是则返回 403 FORBIDDEN，防止误删系统内置或基础菜谱）
+ * 【安全修复 NEW-01】两道校验：
+ * 1. 只有以 'ai-recipe-' 开头的菜谱才允许删除（系统内置菜谱一律 403）；
+ * 2. 必须是该菜谱的生成者本人（owner_id 匹配）才能删除，防止用户删除他人的私有菜谱。
  */
-export function deleteRecipe(id: string): boolean {
+export function deleteRecipe(id: string, userId: string): boolean {
   if (!id || !id.startsWith('ai-recipe-')) {
     throw new RecipeError('仅允许删除 AI 定制菜谱，系统内置或基础菜谱禁止删除', 403, 'FORBIDDEN');
   }
 
-  const result = db.prepare('DELETE FROM recipes WHERE id = ?').run(id);
+  const ownerId = getRecipeOwnerId(id);
+  if (ownerId === undefined) {
+    throw new RecipeError('菜谱不存在或已被删除', 404, 'NOT_FOUND');
+  }
+  if (ownerId !== userId) {
+    // 不向调用者区分「不存在」与「存在但属于他人」，避免泄露他人菜谱 ID
+    throw new RecipeError('菜谱不存在或已被删除', 404, 'NOT_FOUND');
+  }
+
+  const result = db.prepare('DELETE FROM recipes WHERE id = ? AND owner_id = ?').run(id, userId);
   if (result.changes === 0) {
     throw new RecipeError('菜谱不存在或已被删除', 404, 'NOT_FOUND');
   }
@@ -467,12 +517,14 @@ export function recommendRecipes(
  *
  * 单次请求内让模型返回菜谱数组，比循环请求多次更省时间与额度。
  *
+ * @param userId     发起生成的用户 ID，AI 菜谱归其所有（私有）
  * @param inventory  用户当前库存
  * @param preference 口味偏好（可选）
  * @param count      期望生成的菜谱数量，默认 3
  * @returns 生成成功并已入库的菜谱列表；失败时返回空数组
  */
 export async function generateAiRecipes(
+  userId: string,
   inventory: InventoryItem[],
   preference?: string,
   count: number = 3
@@ -591,11 +643,11 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
     const insertStmt = db.prepare(`
       INSERT OR REPLACE INTO recipes (
         id, name, category, cuisine, difficulty, prep_time, cook_time,
-        servings, ingredients, instructions, tips, image_url, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        servings, ingredients, instructions, tips, image_url, created_at, owner_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    // 写入新菜谱 + 清理旧 AI 菜谱放在同一个事务里，保证要么全部成功、要么全部回滚
+    // 写入新菜谱 + 清理该用户的旧 AI 菜谱放在同一个事务里，保证要么全部成功、要么全部回滚
     db.transaction(() => {
       for (const recipe of newRecipes) {
         insertStmt.run(
@@ -611,21 +663,24 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
           JSON.stringify(recipe.instructions),
           recipe.tips || '',
           recipe.image_url || '',
-          now
+          now,
+          userId
         );
       }
 
-      // 控制 AI 菜谱总量：只保留最近 N 条，避免每次生成都新增行导致数据库无限膨胀
+      // 【修复 NEW-02】数量上限改为「按用户」维度：
+      // 旧实现是全局 50 条，多人使用时后生成的用户会把别人还在看的菜谱挤掉。
+      // 现在每个用户各自保留最近 N 条，互不影响。
       db.prepare(`
         DELETE FROM recipes
-        WHERE id LIKE 'ai-recipe-%'
+        WHERE id LIKE 'ai-recipe-%' AND owner_id = ?
           AND id NOT IN (
             SELECT id FROM recipes
-            WHERE id LIKE 'ai-recipe-%'
+            WHERE id LIKE 'ai-recipe-%' AND owner_id = ?
             ORDER BY created_at DESC
             LIMIT ?
           )
-      `).run(MAX_AI_RECIPES);
+      `).run(userId, userId, MAX_AI_RECIPES);
     })();
 
     // 菜谱数据已变化，清空内存缓存，让后续请求读到最新的菜谱集合
@@ -678,6 +733,11 @@ export function cookRecipe(
 ): { success: boolean; historyId: number; consumedCount: number; recipeName: string } {
   const recipe = getRecipeById(recipeId);
   if (!recipe) {
+    throw new Error(`Recipe with id '${recipeId}' not found`);
+  }
+
+  // 【修复 NEW-01】AI 菜谱是私有内容：只能烹饪自己生成的菜谱，内置菜谱人人可用
+  if (recipe.id.startsWith('ai-recipe-') && getRecipeOwnerId(recipeId) !== userId) {
     throw new Error(`Recipe with id '${recipeId}' not found`);
   }
 
