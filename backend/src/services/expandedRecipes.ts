@@ -25,7 +25,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '出锅装盘，淋少许新鲜柠檬汁提鲜即可享用。',
     ],
     tips: '煎鱼前务必吸干水分，皮朝下慢煎能逼出鱼油使鱼皮格外香脆。',
-    image_url: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=500',
+    image_url: '/images/dishes/recipe_pan_seared_salmon.webp',
   },
   {
     id: 'recipe-salmon-salad',
@@ -74,7 +74,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '调蘸料：蒜末加生抽、少许香油调匀，剥壳蘸食。',
     ],
     tips: '水一定要彻底沸腾再下虾，煮至弯曲变红立刻捞出，肉质最紧实弹牙。',
-    image_url: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=500',
+    image_url: '/images/dishes/recipe_steamed_shrimp.webp',
   },
   {
     id: 'recipe-garlic-steamed-shrimp',
@@ -99,7 +99,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '蒸锅水开后大火蒸5-6分钟，出锅撒葱花，淋少许热油激发出香味。',
     ],
     tips: '金银蒜（熟蒜加生蒜）蒜香浓郁且不发苦，底部的粉丝吸饱虾汁特别入味。',
-    image_url: 'https://images.unsplash.com/photo-1559847844-5315695dadae?w=500',
+    image_url: '/images/dishes/recipe_garlic_steamed_shrimp.webp',
   },
   {
     id: 'recipe-shrimp-egg',
@@ -299,7 +299,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '沿锅边淋入香醋，加适量盐翻炒均匀立刻出锅。',
     ],
     tips: '多淘洗去掉淀粉是大火爆炒爽脆的关键，香醋一定要出锅前沿锅边淋入出锅气。',
-    image_url: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=500',
+    image_url: '/images/dishes/recipe_potato_shreds.webp',
   },
   {
     id: 'recipe-tofu-egg',
@@ -349,7 +349,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '加入生抽、少许盐和香醋，继续大火快炒10秒出锅。',
     ],
     tips: '用手撕比刀切更容易附着调味汁，锅气越足越脆嫩。',
-    image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500',
+    image_url: '/images/dishes/recipe_cabbage_stir_fry.webp',
   },
   {
     id: 'recipe-egg-drop-soup',
@@ -432,7 +432,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '撒入青椒碎大火快速翻炒1分钟，汤汁收浓即可装盘。',
     ],
     tips: '茄子提前加盐杀水，下锅翻炒不仅不吸油，而且熟得更快、口感鲜香软糯。',
-    image_url: 'https://images.unsplash.com/photo-1628294895950-9805252327bc?w=500',
+    image_url: '/images/dishes/recipe_pork_eggplant.webp',
   },
   {
     id: 'recipe-yuxiang-eggplant',
@@ -494,7 +494,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '开大火快速翻炒收汁，见汤汁浓稠红亮紧紧包裹在排骨上，出锅撒上白芝麻。',
     ],
     tips: '糖醋汁牢记1酒2酱3糖4醋口诀，最后大火收汁让糖汁焦化包裹，色泽更红润光亮。',
-    image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=500',
+    image_url: '/images/dishes/recipe_sweet_sour_ribs.webp',
   },
   {
     id: 'recipe-corn-ribs-soup',

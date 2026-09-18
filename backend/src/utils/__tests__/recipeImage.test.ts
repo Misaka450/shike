@@ -3,30 +3,50 @@ import assert from 'node:assert/strict';
 import { selectRecipeImage, RECIPE_IMAGE_MAP } from '../recipeImage.js';
 
 describe('selectRecipeImage（食谱封面图精准智能对应）', () => {
-  it('番茄炒蛋/西红柿炒蛋优先使用本地高清 WebP 封面', () => {
-    assert.equal(selectRecipeImage('西红柿炒鸡蛋'), '/images/tomato_egg.webp');
-    assert.equal(selectRecipeImage('番茄炒蛋'), '/images/tomato_egg.webp');
-    assert.equal(selectRecipeImage('西红柿炒蛋'), '/images/tomato_egg.webp');
+  it('番茄炒蛋/西红柿炒蛋优先使用本地高质量 WebP 封面', () => {
+    assert.equal(selectRecipeImage('西红柿炒鸡蛋'), '/images/dishes/recipe_tomato_egg.webp');
+    assert.equal(selectRecipeImage('番茄炒蛋'), '/images/dishes/recipe_tomato_egg.webp');
+    assert.equal(selectRecipeImage('西红柿炒蛋'), '/images/dishes/recipe_tomato_egg.webp');
   });
 
-  it('地三鲜与茄子类匹配茄子高清图', () => {
-    const url = selectRecipeImage('地三鲜');
-    assert.equal(url, RECIPE_IMAGE_MAP.eggplant);
+  it('官方已核验核心菜品优先匹配本地高质量 WebP 大片', () => {
+    assert.equal(selectRecipeImage('地三鲜'), '/images/dishes/recipe_di_san_xian.webp');
+    assert.equal(selectRecipeImage('酸辣土豆丝'), '/images/dishes/recipe_potato_shreds.webp');
+    assert.equal(selectRecipeImage('麻婆豆腐'), '/images/dishes/recipe_mapo_tofu.webp');
+    assert.equal(selectRecipeImage('可乐鸡翅'), '/images/dishes/recipe_cola_wings.webp');
+    assert.equal(selectRecipeImage('糖醋排骨'), '/images/dishes/recipe_sweet_sour_ribs.webp');
+    assert.equal(selectRecipeImage('青椒小炒肉'), '/images/dishes/recipe_pepper_pork.webp');
+    assert.equal(selectRecipeImage('白灼基围虾'), '/images/dishes/recipe_steamed_shrimp.webp');
+    assert.equal(selectRecipeImage('蚂蚁上树'), '/images/dishes/recipe_htc_8402a0fbca.webp');
+    assert.equal(selectRecipeImage('茄子炖土豆'), '/images/dishes/recipe_htc_083a15958b.webp');
+    assert.equal(selectRecipeImage('红烧鲤鱼'), '/images/dishes/recipe_htc_4b2beca30f.webp');
+    assert.equal(selectRecipeImage('蒜苔炒肉末'), '/images/dishes/recipe_htc_b80cf09bf6.webp');
+    assert.equal(selectRecipeImage('黄瓜炒肉'), '/images/dishes/recipe_htc_0cc027f236.webp');
+  });
+
+  it('支持传入 recipeId 强锁定本地核验大片', () => {
+    assert.equal(selectRecipeImage('创新地三鲜', '家常菜', [], 'recipe-di-san-xian'), '/images/dishes/recipe_di_san_xian.webp');
+    assert.equal(selectRecipeImage('东北大乱炖', '家常菜', [], 'recipe-htc-083a15958b'), '/images/dishes/recipe_htc_083a15958b.webp');
+  });
+
+  it('非白名单茄子类匹配通用茄子图', () => {
     assert.equal(selectRecipeImage('风味茄子煲'), RECIPE_IMAGE_MAP.eggplant);
+    assert.equal(selectRecipeImage('烤茄子'), RECIPE_IMAGE_MAP.eggplant);
   });
 
-  it('土豆类精准匹配土豆高清图', () => {
-    assert.equal(selectRecipeImage('酸辣土豆丝'), RECIPE_IMAGE_MAP.potato);
+  it('非白名单土豆类匹配通用土豆图', () => {
+    assert.equal(selectRecipeImage('炸薯条'), RECIPE_IMAGE_MAP.potato);
+    assert.equal(selectRecipeImage('香煎土豆块'), RECIPE_IMAGE_MAP.potato);
   });
 
-  it('豆腐与麻婆豆腐匹配麻婆豆腐图', () => {
-    assert.equal(selectRecipeImage('麻婆豆腐'), RECIPE_IMAGE_MAP.tofu);
+  it('非白名单豆腐类匹配通用豆腐图', () => {
     assert.equal(selectRecipeImage('家常豆腐'), RECIPE_IMAGE_MAP.tofu);
+    assert.equal(selectRecipeImage('香煎豆腐'), RECIPE_IMAGE_MAP.tofu);
   });
 
-  it('鸡翅与可乐鸡翅匹配鸡翅图', () => {
-    assert.equal(selectRecipeImage('可乐鸡翅'), RECIPE_IMAGE_MAP.chicken_wings);
+  it('非白名单鸡翅类匹配通用鸡翅图', () => {
     assert.equal(selectRecipeImage('奥尔良烤翅'), RECIPE_IMAGE_MAP.chicken_wings);
+    assert.equal(selectRecipeImage('蒜香鸡翅'), RECIPE_IMAGE_MAP.chicken_wings);
   });
 
   it('鸡肉类正确匹配且不受鸡蛋干扰', () => {
@@ -38,9 +58,9 @@ describe('selectRecipeImage（食谱封面图精准智能对应）', () => {
     assert.equal(selectRecipeImage('微波炉蒸蛋'), RECIPE_IMAGE_MAP.egg_dishes);
   });
 
-  it('排骨类匹配排骨图', () => {
-    assert.equal(selectRecipeImage('糖醋排骨'), RECIPE_IMAGE_MAP.ribs);
+  it('非白名单排骨类匹配通用排骨图', () => {
     assert.equal(selectRecipeImage('红烧排骨'), RECIPE_IMAGE_MAP.ribs);
+    assert.equal(selectRecipeImage('粉蒸排骨'), RECIPE_IMAGE_MAP.ribs);
   });
 
   it('红烧肉与五花肉匹配红烧肉图', () => {
@@ -48,9 +68,9 @@ describe('selectRecipeImage（食谱封面图精准智能对应）', () => {
     assert.equal(selectRecipeImage('红烧五花肉'), RECIPE_IMAGE_MAP.braised_pork);
   });
 
-  it('小炒肉与肉丝匹配小炒肉图', () => {
-    assert.equal(selectRecipeImage('青椒小炒肉'), RECIPE_IMAGE_MAP.stir_fry_pork);
-    assert.equal(selectRecipeImage('鱼香肉丝'), RECIPE_IMAGE_MAP.stir_fry_pork);
+  it('非白名单小炒肉与肉丝匹配炒肉图', () => {
+    assert.equal(selectRecipeImage('农家小炒肉片'), RECIPE_IMAGE_MAP.stir_fry_pork);
+    assert.equal(selectRecipeImage('京酱肉丝'), RECIPE_IMAGE_MAP.stir_fry_pork);
   });
 
   it('牛肉类匹配牛肉图', () => {
@@ -58,9 +78,9 @@ describe('selectRecipeImage（食谱封面图精准智能对应）', () => {
     assert.equal(selectRecipeImage('葱爆牛肉'), RECIPE_IMAGE_MAP.beef);
   });
 
-  it('水产鱼虾匹配对应海鲜图', () => {
+  it('非白名单水产鱼虾匹配对应海鲜图', () => {
     assert.equal(selectRecipeImage('清蒸鲈鱼'), RECIPE_IMAGE_MAP.fish);
-    assert.equal(selectRecipeImage('白灼基围虾'), RECIPE_IMAGE_MAP.shrimp_seafood);
+    assert.equal(selectRecipeImage('白灼大虾仁'), RECIPE_IMAGE_MAP.shrimp_seafood);
   });
 
   it('面食、炒饭与点心面食匹配对应高清图', () => {

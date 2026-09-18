@@ -45,7 +45,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '加少许糖调味，倒回炒好的鸡蛋翻炒均匀即可出锅。',
     ],
     tips: '西红柿炒出沙汁是好吃的秘诀，加少许白糖可中和番茄酸味。',
-    image_url: '/images/tomato_egg.webp',
+    image_url: '/images/dishes/recipe_tomato_egg.webp',
   },
   {
     id: 'recipe-cucumber-salad',
@@ -97,7 +97,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '倒入配菜丝炒至断生，倒回肉丝和鱼香汁大火翻炒收汁。',
     ],
     tips: '肉丝切匀且用淀粉上浆是嫩滑的关键，鱼香汁按经典比例调配。',
-    image_url: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=500',
+    image_url: '/images/dishes/recipe_yuxiang_pork.webp',
   },
   {
     id: 'recipe-pepper-pork',
@@ -122,7 +122,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '加入蒜片、生抽、老抽翻炒上色，倒回青椒大火炒匀出锅。',
     ],
     tips: '先干煸青椒逼出椒香，五花肉逼出多余油脂就不会腻。',
-    image_url: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=500',
+    image_url: '/images/dishes/recipe_pepper_pork.webp',
   },
   {
     id: 'recipe-mapo-tofu',
@@ -148,7 +148,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '分三次淋入水淀粉勾芡收浓汤汁，撒葱花与花椒面出锅。',
     ],
     tips: '豆腐焯盐水能定型不易碎，三次勾芡能让汤汁完美裹住豆腐。',
-    image_url: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=500',
+    image_url: '/images/dishes/recipe_mapo_tofu.webp',
   },
   {
     id: 'recipe-di-san-xian',
@@ -174,7 +174,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '下入三鲜快速大火翻炒挂汁即可。',
     ],
     tips: '茄子裹一层薄薄的淀粉炸制，能有效防止吸入过多油分。',
-    image_url: 'https://images.unsplash.com/photo-1628294895950-9805252327bc?w=500',
+    image_url: '/images/dishes/recipe_di_san_xian.webp',
   },
   {
     id: 'recipe-garlic-broccoli',
@@ -199,7 +199,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '出锅前撒入剩余蒜蓉提升香味即可。',
     ],
     tips: '焯水加食用油能让西兰花翠绿诱人，分两次下蒜香气更足。',
-    image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500',
+    image_url: '/images/dishes/recipe_garlic_broccoli.webp',
   },
   {
     id: 'recipe-cola-wings',
@@ -225,7 +225,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
       '最后开大火收浓汤汁，裹满焦糖色即可出锅。',
     ],
     tips: '收汁时要不断翻动鸡翅防止粘锅焦糊，汤汁黏稠时口感最好。',
-    image_url: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=500',
+    image_url: '/images/dishes/recipe_cola_wings.webp',
   },
 ];
 
@@ -657,21 +657,24 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
     const stamp = Date.now();
 
     // 逐条补齐服务端负责的字段（唯一 id 与生成时间），并加上 AI 定制标识
-    const newRecipes: Recipe[] = validated.data.recipes.slice(0, count).map((item, index) => ({
-      id: `ai-recipe-${stamp}-${index + 1}`,
-      name: `✨ AI定制 · ${item.name}`,
-      category: item.category || '创意料理',
-      cuisine: item.cuisine || '现代家庭料理',
-      difficulty: item.difficulty || '简单',
-      prep_time: Number(item.prep_time) || 5,
-      cook_time: Number(item.cook_time) || 10,
-      servings: Number(item.servings) || 1,
-      ingredients: item.ingredients || [],
-      instructions: item.instructions || [],
-      tips: item.tips || 'AI主厨根据您冰箱现有食材量身定制。',
-      image_url: selectRecipeImage(item.name, item.category || '创意料理', item.ingredients || []),
-      created_at: now,
-    }));
+    const newRecipes: Recipe[] = validated.data.recipes.slice(0, count).map((item, index) => {
+      const recipeId = `ai-recipe-${stamp}-${index + 1}`;
+      return {
+        id: recipeId,
+        name: `✨ AI定制 · ${item.name}`,
+        category: item.category || '创意料理',
+        cuisine: item.cuisine || '现代家庭料理',
+        difficulty: item.difficulty || '简单',
+        prep_time: Number(item.prep_time) || 5,
+        cook_time: Number(item.cook_time) || 10,
+        servings: Number(item.servings) || 1,
+        ingredients: item.ingredients || [],
+        instructions: item.instructions || [],
+        tips: item.tips || 'AI主厨根据您冰箱现有食材量身定制。',
+        image_url: selectRecipeImage(item.name, item.category || '创意料理', item.ingredients || [], recipeId),
+        created_at: now,
+      };
+    });
 
     const insertStmt = db.prepare(`
       INSERT OR REPLACE INTO recipes (

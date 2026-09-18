@@ -3,23 +3,77 @@
 
 """
 fix_recipe_images.py
-为食刻数据库 (shike.db) 中全部 386 条食谱精准匹配真实中餐美食高清封面图。
-严禁硬编码欧式生沙拉，番茄炒蛋类优先使用本地图 /images/tomato_egg.webp。
+为食刻数据库 (shike.db) 中全部食谱精准匹配真实中餐美食高清封面图。
+第一优先级引入 LOCAL_VERIFIED_RECIPES 本地已核验高清封面白名单，
+严禁硬编码欧式生沙拉，番茄炒蛋类优先使用本地高质量图 /images/dishes/recipe_tomato_egg.webp。
 """
 
 import os
 import sys
 import json
 import sqlite3
+import re
 from pathlib import Path
 
 DB_PATH = Path('/opt/shike-ai/data/db/shike.db')
+
+# 食刻官方已核验本地高质量 WebP 菜谱封面白名单字典
+# 支持按 recipe_id 或精确菜品名称精确命中，第一优先级返回对应本地 WebP
+LOCAL_VERIFIED_RECIPES = {
+    # 1. 按 recipeId 精确映射
+    'recipe-tomato-egg': '/images/dishes/recipe_tomato_egg.webp',
+    'recipe-htc-8402a0fbca': '/images/dishes/recipe_htc_8402a0fbca.webp',
+    'recipe-htc-0cc027f236': '/images/dishes/recipe_htc_0cc027f236.webp',
+    'recipe-htc-083a15958b': '/images/dishes/recipe_htc_083a15958b.webp',
+    'recipe-htc-4b2beca30f': '/images/dishes/recipe_htc_4b2beca30f.webp',
+    'recipe-htc-b80cf09bf6': '/images/dishes/recipe_htc_b80cf09bf6.webp',
+    'recipe-htc-5d3159e46a': '/images/dishes/recipe_htc_5d3159e46a.webp',
+    'recipe-pork-eggplant': '/images/dishes/recipe_pork_eggplant.webp',
+    'recipe-mapo-tofu': '/images/dishes/recipe_mapo_tofu.webp',
+    'recipe-steamed-shrimp': '/images/dishes/recipe_steamed_shrimp.webp',
+    'recipe-cola-wings': '/images/dishes/recipe_cola_wings.webp',
+    'recipe-di-san-xian': '/images/dishes/recipe_di_san_xian.webp',
+    'recipe-yuxiang-pork': '/images/dishes/recipe_yuxiang_pork.webp',
+    'recipe-pepper-pork': '/images/dishes/recipe_pepper_pork.webp',
+    'recipe-garlic-broccoli': '/images/dishes/recipe_garlic_broccoli.webp',
+    'recipe-potato-shreds': '/images/dishes/recipe_potato_shreds.webp',
+    'recipe-sweet-sour-ribs': '/images/dishes/recipe_sweet_sour_ribs.webp',
+    'recipe-pan-seared-salmon': '/images/dishes/recipe_pan_seared_salmon.webp',
+    'recipe-garlic-steamed-shrimp': '/images/dishes/recipe_garlic_steamed_shrimp.webp',
+    'recipe-cabbage-stir-fry': '/images/dishes/recipe_cabbage_stir_fry.webp',
+
+    # 2. 按菜品精确名称映射
+    '西红柿炒鸡蛋': '/images/dishes/recipe_tomato_egg.webp',
+    '番茄炒蛋': '/images/dishes/recipe_tomato_egg.webp',
+    '西红柿炒蛋': '/images/dishes/recipe_tomato_egg.webp',
+    '番茄炒鸡蛋': '/images/dishes/recipe_tomato_egg.webp',
+    '蚂蚁上树': '/images/dishes/recipe_htc_8402a0fbca.webp',
+    '黄瓜炒肉': '/images/dishes/recipe_htc_0cc027f236.webp',
+    '茄子炖土豆': '/images/dishes/recipe_htc_083a15958b.webp',
+    '红烧鲤鱼': '/images/dishes/recipe_htc_4b2beca30f.webp',
+    '蒜苔炒肉末': '/images/dishes/recipe_htc_b80cf09bf6.webp',
+    '桂林十八酿': '/images/dishes/recipe_htc_5d3159e46a.webp',
+    '肉末风味茄子': '/images/dishes/recipe_pork_eggplant.webp',
+    '麻婆豆腐': '/images/dishes/recipe_mapo_tofu.webp',
+    '白灼基围虾': '/images/dishes/recipe_steamed_shrimp.webp',
+    '可乐鸡翅': '/images/dishes/recipe_cola_wings.webp',
+    '地三鲜': '/images/dishes/recipe_di_san_xian.webp',
+    '鱼香肉丝': '/images/dishes/recipe_yuxiang_pork.webp',
+    '青椒小炒肉': '/images/dishes/recipe_pepper_pork.webp',
+    '蒜蓉西兰花': '/images/dishes/recipe_garlic_broccoli.webp',
+    '酸辣土豆丝': '/images/dishes/recipe_potato_shreds.webp',
+    '糖醋排骨': '/images/dishes/recipe_sweet_sour_ribs.webp',
+    '香煎黑椒三文鱼': '/images/dishes/recipe_pan_seared_salmon.webp',
+    '蒜蓉粉丝蒸大虾': '/images/dishes/recipe_garlic_steamed_shrimp.webp',
+    '手撕包菜': '/images/dishes/recipe_cabbage_stir_fry.webp',
+    '手撕手剥包菜': '/images/dishes/recipe_cabbage_stir_fry.webp',
+}
 
 # 真实可访问的中式高清美食图片映射表（Unsplash Imgix CDN & 本地高质量 WebP）
 # 全部 URL 均已通过 HTTP 200 验证
 IMAGE_MAP = {
     # 1. 番茄炒蛋 / 西红柿炒蛋
-    'tomato_egg': '/images/tomato_egg.webp',
+    'tomato_egg': '/images/dishes/recipe_tomato_egg.webp',
 
     # 2. 茄子 / 地三鲜
     'eggplant': 'https://images.unsplash.com/photo-1628294895950-9805252327bc?w=500',
@@ -103,11 +157,20 @@ IMAGE_MAP = {
 
 import re
 
-def resolve_recipe_image(name: str, category: str, ingredients_json: str) -> tuple[str, str]:
+def resolve_recipe_image(name: str, category: str, ingredients_json: str, recipe_id: str = None) -> tuple[str, str]:
     """
     根据菜品名称、分类及食材，精准匹配最对应的中餐美食高清图。
     返回 (image_url, match_type)
     """
+    # 0. 第一优先级：精确匹配本地已核验高质量菜谱白名单（支持按 recipe_id 或精确名称）
+    if recipe_id and recipe_id in LOCAL_VERIFIED_RECIPES:
+        return LOCAL_VERIFIED_RECIPES[recipe_id], 'local_verified'
+    clean_name = re.sub(r'^✨\s*AI定制\s*·\s*', '', name).strip()
+    if clean_name in LOCAL_VERIFIED_RECIPES:
+        return LOCAL_VERIFIED_RECIPES[clean_name], 'local_verified'
+    if name.strip() in LOCAL_VERIFIED_RECIPES:
+        return LOCAL_VERIFIED_RECIPES[name.strip()], 'local_verified'
+
     # 提取食材纯文本以备辅助匹配
     ing_text = ''
     try:
@@ -270,7 +333,7 @@ def main():
     updates = []
 
     for r_id, name, category, ingredients_json, old_image_url in rows:
-        new_url, match_type = resolve_recipe_image(name, category, ingredients_json)
+        new_url, match_type = resolve_recipe_image(name, category, ingredients_json, recipe_id=r_id)
         stats[match_type] = stats.get(match_type, 0) + 1
         updates.append((new_url, r_id))
 

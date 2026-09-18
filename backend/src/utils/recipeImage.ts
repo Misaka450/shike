@@ -3,8 +3,8 @@
  * 全部外部 URL 均已通过 HTTP 200 验证。
  */
 export const RECIPE_IMAGE_MAP: Record<string, string> = {
-  // 1. 番茄炒蛋 / 西红柿炒蛋 (本地高清图)
-  tomato_egg: '/images/tomato_egg.webp',
+  // 1. 番茄炒蛋 / 西红柿炒蛋 (本地高质量 WebP)
+  tomato_egg: '/images/dishes/recipe_tomato_egg.webp',
 
   // 2. 茄子 / 地三鲜
   eggplant: 'https://images.unsplash.com/photo-1628294895950-9805252327bc?w=500',
@@ -87,13 +87,79 @@ export const RECIPE_IMAGE_MAP: Record<string, string> = {
 };
 
 /**
+ * 食刻官方已核验本地高质量 WebP 菜谱封面白名单字典
+ * 支持按 recipeId 或精确菜品名称精确命中，第一优先级返回对应本地 WebP
+ */
+export const LOCAL_VERIFIED_RECIPES: Record<string, string> = {
+  // 1. 按 recipeId 精确映射
+  'recipe-tomato-egg': '/images/dishes/recipe_tomato_egg.webp',
+  'recipe-htc-8402a0fbca': '/images/dishes/recipe_htc_8402a0fbca.webp',
+  'recipe-htc-0cc027f236': '/images/dishes/recipe_htc_0cc027f236.webp',
+  'recipe-htc-083a15958b': '/images/dishes/recipe_htc_083a15958b.webp',
+  'recipe-htc-4b2beca30f': '/images/dishes/recipe_htc_4b2beca30f.webp',
+  'recipe-htc-b80cf09bf6': '/images/dishes/recipe_htc_b80cf09bf6.webp',
+  'recipe-htc-5d3159e46a': '/images/dishes/recipe_htc_5d3159e46a.webp',
+  'recipe-pork-eggplant': '/images/dishes/recipe_pork_eggplant.webp',
+  'recipe-mapo-tofu': '/images/dishes/recipe_mapo_tofu.webp',
+  'recipe-steamed-shrimp': '/images/dishes/recipe_steamed_shrimp.webp',
+  'recipe-cola-wings': '/images/dishes/recipe_cola_wings.webp',
+  'recipe-di-san-xian': '/images/dishes/recipe_di_san_xian.webp',
+  'recipe-yuxiang-pork': '/images/dishes/recipe_yuxiang_pork.webp',
+  'recipe-pepper-pork': '/images/dishes/recipe_pepper_pork.webp',
+  'recipe-garlic-broccoli': '/images/dishes/recipe_garlic_broccoli.webp',
+  'recipe-potato-shreds': '/images/dishes/recipe_potato_shreds.webp',
+  'recipe-sweet-sour-ribs': '/images/dishes/recipe_sweet_sour_ribs.webp',
+  'recipe-pan-seared-salmon': '/images/dishes/recipe_pan_seared_salmon.webp',
+  'recipe-garlic-steamed-shrimp': '/images/dishes/recipe_garlic_steamed_shrimp.webp',
+  'recipe-cabbage-stir-fry': '/images/dishes/recipe_cabbage_stir_fry.webp',
+
+  // 2. 按菜品精确名称映射
+  '西红柿炒鸡蛋': '/images/dishes/recipe_tomato_egg.webp',
+  '番茄炒蛋': '/images/dishes/recipe_tomato_egg.webp',
+  '西红柿炒蛋': '/images/dishes/recipe_tomato_egg.webp',
+  '番茄炒鸡蛋': '/images/dishes/recipe_tomato_egg.webp',
+  '蚂蚁上树': '/images/dishes/recipe_htc_8402a0fbca.webp',
+  '黄瓜炒肉': '/images/dishes/recipe_htc_0cc027f236.webp',
+  '茄子炖土豆': '/images/dishes/recipe_htc_083a15958b.webp',
+  '红烧鲤鱼': '/images/dishes/recipe_htc_4b2beca30f.webp',
+  '蒜苔炒肉末': '/images/dishes/recipe_htc_b80cf09bf6.webp',
+  '桂林十八酿': '/images/dishes/recipe_htc_5d3159e46a.webp',
+  '肉末风味茄子': '/images/dishes/recipe_pork_eggplant.webp',
+  '麻婆豆腐': '/images/dishes/recipe_mapo_tofu.webp',
+  '白灼基围虾': '/images/dishes/recipe_steamed_shrimp.webp',
+  '可乐鸡翅': '/images/dishes/recipe_cola_wings.webp',
+  '地三鲜': '/images/dishes/recipe_di_san_xian.webp',
+  '鱼香肉丝': '/images/dishes/recipe_yuxiang_pork.webp',
+  '青椒小炒肉': '/images/dishes/recipe_pepper_pork.webp',
+  '蒜蓉西兰花': '/images/dishes/recipe_garlic_broccoli.webp',
+  '酸辣土豆丝': '/images/dishes/recipe_potato_shreds.webp',
+  '糖醋排骨': '/images/dishes/recipe_sweet_sour_ribs.webp',
+  '香煎黑椒三文鱼': '/images/dishes/recipe_pan_seared_salmon.webp',
+  '蒜蓉粉丝蒸大虾': '/images/dishes/recipe_garlic_steamed_shrimp.webp',
+  '手撕包菜': '/images/dishes/recipe_cabbage_stir_fry.webp',
+  '手撕手剥包菜': '/images/dishes/recipe_cabbage_stir_fry.webp',
+};
+
+/**
  * 根据菜品名称、分类及食材，智能挑选真实对应的高清封面图
  */
 export function selectRecipeImage(
   name: string,
   category = '',
-  ingredients: Array<{ name: string } | string> = []
+  ingredients: Array<{ name: string } | string> = [],
+  recipeId?: string
 ): string {
+  // 0. 第一优先级：精确匹配本地已核验高质量菜谱白名单（支持按 recipeId 或精确名称）
+  if (recipeId && LOCAL_VERIFIED_RECIPES[recipeId]) {
+    return LOCAL_VERIFIED_RECIPES[recipeId];
+  }
+  const cleanName = name.replace(/^✨\s*AI定制\s*·\s*/, '').trim();
+  if (LOCAL_VERIFIED_RECIPES[cleanName]) {
+    return LOCAL_VERIFIED_RECIPES[cleanName];
+  }
+  if (LOCAL_VERIFIED_RECIPES[name.trim()]) {
+    return LOCAL_VERIFIED_RECIPES[name.trim()];
+  }
   // 提取食材纯文本以备辅助匹配
   let ingText = '';
   if (Array.isArray(ingredients)) {

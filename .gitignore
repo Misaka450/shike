@@ -30,6 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # Cache & Diagnostics
+__pycache__/
+*.py[cod]
 .turbo/
 .cache/
 *.tsbuildinfo
