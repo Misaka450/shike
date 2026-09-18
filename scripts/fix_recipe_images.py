@@ -87,6 +87,10 @@ IMAGE_MAP = {
     # 23. 烘焙 / 甜品 / 松饼 / 吐司 / 蛋糕 / 糖水
     'baking_dessert': 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=500',
 
+    # 24. 沙拉 / 轻食 / 大拌菜 / 温沙拉
+    'salad': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500',
+    'fallback_salad': 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+
     # 分类真实中餐兜底（绝不用欧式生沙拉）
     'fallback_veggie': 'https://images.unsplash.com/photo-1525755662778-989d0524087e?w=500', # 锅气热炒素菜
     'fallback_seafood': 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=500', # 鲜虾海鲜
@@ -130,8 +134,12 @@ def resolve_recipe_image(name: str, category: str, ingredients_json: str) -> tup
        or any(k in name for k in ['西红柿炒蛋', '番茄炒蛋', '番茄炒鸡蛋', '西红柿炒鸡蛋', '番茄鸡蛋']):
         return IMAGE_MAP['tomato_egg'], 'tomato_egg'
 
-    # 2. 烘焙 / 甜品 / 松饼 / 吐司 / 蛋糕 / 糖水
-    if any(k in name for k in ['松饼', '吐司', '蛋糕', '面包', '甜品', '蛋挞', '饼干', '糖水', '双皮奶', '杨枝甘露', '西米露', '冰粉', '芋圆', '烘焙', '布丁', '酸奶', '坚果', '香蕉', '沙拉', '汤圆', '冰淇淋', '奶冻', '雪媚娘', '司康', '雪花酥', '龟苓膏', '甜糕', '鲜奶', '芋头', '提拉米苏']):
+    # 2. 沙拉 / 轻食 / 温沙拉 / 大拌菜 / 油醋汁
+    if any(k in name for k in ['沙拉', '大拌菜', '温沙拉', '油醋汁']) or category in ['轻食沙拉', '沙拉', '减脂轻食']:
+        return IMAGE_MAP['salad'], 'salad'
+
+    # 3. 烘焙 / 甜品 / 松饼 / 吐司 / 蛋糕 / 糖水
+    if any(k in name for k in ['松饼', '吐司', '蛋糕', '面包', '甜品', '蛋挞', '饼干', '糖水', '双皮奶', '杨枝甘露', '西米露', '冰粉', '芋圆', '烘焙', '布丁', '酸奶', '坚果', '香蕉', '汤圆', '冰淇淋', '奶冻', '雪媚娘', '司康', '雪花酥', '龟苓膏', '甜糕', '鲜奶', '芋头', '提拉米苏']):
         return IMAGE_MAP['baking_dessert'], 'baking_dessert'
 
     # 3. 茄子 / 地三鲜
@@ -226,7 +234,9 @@ def resolve_recipe_image(name: str, category: str, ingredients_json: str) -> tup
     if '烧烤' in name or '烤' in name:
         return IMAGE_MAP['braised_pork'], 'barbecue'
 
-    # 兜底规则（真实中式炒菜、炖菜、面点，绝不用生沙拉）
+    # 兜底规则
+    if category in ['轻食沙拉', '沙拉', '减脂轻食']:
+        return IMAGE_MAP['fallback_salad'], 'fallback_salad'
     if category in ['素菜', '快手菜']:
         return IMAGE_MAP['fallback_veggie'], 'fallback_veggie'
     if category in ['水产海鲜', '海鲜水产']:

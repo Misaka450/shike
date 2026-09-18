@@ -74,10 +74,22 @@ describe('selectRecipeImage（食谱封面图精准智能对应）', () => {
     assert.equal(selectRecipeImage('焦糖香蕉烤吐司'), RECIPE_IMAGE_MAP.baking_dessert);
   });
 
-  it('未命中特定关键词时使用真实中餐分类兜底，严禁返回欧式生蔬菜沙拉', () => {
+  it('沙拉与轻食类菜谱精准匹配沙拉高清图', () => {
+    assert.equal(selectRecipeImage('三文鱼轻食温沙拉'), RECIPE_IMAGE_MAP.salad);
+    assert.equal(selectRecipeImage('经典蔬菜沙拉'), RECIPE_IMAGE_MAP.salad);
+    assert.equal(selectRecipeImage('鸡胸肉沙拉'), RECIPE_IMAGE_MAP.salad);
+    assert.equal(selectRecipeImage('东北大拌菜'), RECIPE_IMAGE_MAP.salad);
+    assert.equal(selectRecipeImage('油醋汁时蔬'), RECIPE_IMAGE_MAP.salad);
+  });
+
+  it('轻食沙拉分类兜底返回沙拉封面图', () => {
+    assert.equal(selectRecipeImage('自选活力轻食碗', '轻食沙拉'), RECIPE_IMAGE_MAP.fallback_salad);
+    assert.equal(selectRecipeImage('低卡营养餐', '沙拉'), RECIPE_IMAGE_MAP.fallback_salad);
+    assert.equal(selectRecipeImage('塑形减脂餐', '减脂轻食'), RECIPE_IMAGE_MAP.fallback_salad);
+  });
+
+  it('未命中特定关键词时按分类正确兜底', () => {
     const veggieFallback = selectRecipeImage('神秘时蔬小炒', '素菜');
-    assert.notEqual(veggieFallback, 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500');
-    assert.notEqual(veggieFallback, 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500');
     assert.equal(veggieFallback, RECIPE_IMAGE_MAP.fallback_veggie);
 
     const meatFallback = selectRecipeImage('秘制特色炒菜', '家常菜');

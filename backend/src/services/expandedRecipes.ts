@@ -50,7 +50,7 @@ export const EXPANDED_RECIPES: Recipe[] = [
       '淋入少许生抽或低卡油醋汁，撒黑胡椒拌匀。',
     ],
     tips: '三文鱼富含Omega-3健康油脂，搭配水煮蛋是完美的减脂增肌餐。',
-    image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
+    image_url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500',
   },
   {
     id: 'recipe-steamed-shrimp',

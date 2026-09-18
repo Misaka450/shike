@@ -1,6 +1,6 @@
 /**
- * 真实可访问的中式高清美食图片映射表（Unsplash Imgix CDN & 本地高质量 WebP）
- * 全部外部 URL 均已通过 HTTP 200 验证，严禁硬编码欧式生蔬菜沙拉。
+ * 真实可访问的高清美食图片映射表（Unsplash Imgix CDN & 本地高质量 WebP）
+ * 全部外部 URL 均已通过 HTTP 200 验证。
  */
 export const RECIPE_IMAGE_MAP: Record<string, string> = {
   // 1. 番茄炒蛋 / 西红柿炒蛋 (本地高清图)
@@ -72,7 +72,11 @@ export const RECIPE_IMAGE_MAP: Record<string, string> = {
   // 23. 烘焙 / 甜品 / 松饼 / 吐司 / 蛋糕 / 糖水
   baking_dessert: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=500',
 
-  // 真实中餐分类兜底（绝不用欧式生沙拉）
+  // 24. 沙拉 / 轻食 / 大拌菜 / 温沙拉
+  salad: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500',
+  fallback_salad: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
+
+  // 分类兜底
   fallback_veggie: 'https://images.unsplash.com/photo-1525755662778-989d0524087e?w=500',
   fallback_seafood: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=500',
   fallback_staple: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=500',
@@ -118,12 +122,17 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.tomato_egg;
   }
 
-  // 2. 烘焙 / 甜品 / 松饼 / 吐司 / 蛋糕 / 糖水
+  // 2. 沙拉 / 轻食 / 温沙拉 / 大拌菜 / 油醋汁
+  if (['沙拉', '大拌菜', '温沙拉', '油醋汁'].some((k) => name.includes(k))) {
+    return RECIPE_IMAGE_MAP.salad;
+  }
+
+  // 3. 烘焙 / 甜品 / 松饼 / 吐司 / 蛋糕 / 糖水
   if (
     [
       '松饼', '吐司', '蛋糕', '面包', '甜品', '蛋挞', '饼干', '糖水', '双皮奶',
       '杨枝甘露', '西米露', '冰粉', '芋圆', '烘焙', '布丁', '酸奶', '坚果', '香蕉',
-      '沙拉', '汤圆', '冰淇淋', '奶冻', '雪媚娘', '司康', '雪花酥', '龟苓膏', '甜糕',
+      '汤圆', '冰淇淋', '奶冻', '雪媚娘', '司康', '雪花酥', '龟苓膏', '甜糕',
       '鲜奶', '芋头', '提拉米苏',
     ].some((k) => name.includes(k))
   ) {
@@ -305,7 +314,10 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.braised_pork;
   }
 
-  // 兜底规则（真实中式炒菜、炖菜、面点，绝不用生沙拉）
+  // 兜底规则
+  if (category === '轻食沙拉' || category === '沙拉' || category === '减脂轻食') {
+    return RECIPE_IMAGE_MAP.fallback_salad;
+  }
   if (category === '素菜' || category === '快手菜') {
     return RECIPE_IMAGE_MAP.fallback_veggie;
   }
