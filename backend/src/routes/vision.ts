@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
+import { bodyLimitResponse, isBodyLimitError, readJsonBody } from '../middleware/bodyLimit.js';
 import { config } from '../config.js';
 import { checkRateLimit, getClientIp } from '../services/authSecurity.js';
 import { batchAddInventory } from '../services/inventoryService.js';
@@ -103,7 +104,7 @@ visionRoute.post('/fridge-scan', async (c) => {
       }
     }
   } else if (contentType.includes('application/json')) {
-    const json = (await c.req.json().catch(() => ({}))) as {
+    const json = (await readJsonBody(c)) as {
       auto_add?: boolean;
       image?: string;
       mime_type?: string;
@@ -199,6 +200,11 @@ visionRoute.post('/fridge-scan', async (c) => {
       },
     });
   } catch (error: unknown) {
+    // 请求体超限是调用方的问题，必须按 413 返回，不能混同于"识别失败"
+    if (isBodyLimitError(error)) {
+      return bodyLimitResponse(config.MAX_BODY_BYTES);
+    }
+
     // 内部细节只进服务端日志，对外返回通用提示（SEC-08）
     console.error('[VisionRoute] 识图失败：', error);
     return c.json(

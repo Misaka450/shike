@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import type { Context } from 'hono';
 import { config } from '../config.js';
 
@@ -277,20 +278,34 @@ export function getClientIp(c: Context): string {
 
 // --- Password Hashing & Timing-safe Verification ---
 
-export function hashPassword(password: string): string {
+/**
+ * scrypt 的异步版本（修复 PERF-01）
+ *
+ * scrypt 是刻意设计的「慢哈希」，单次计算就要占用事件循环几十上百毫秒。
+ * 之前用 scryptSync，登录/注册期间整条 Node 主线程会被完全阻塞，
+ * 并发请求全部排队等待，最坏情况下表现为服务假死。
+ * 改成异步后计算扔进 libuv 线程池，主线程继续处理其它请求。
+ */
+const scryptAsync = promisify(crypto.scrypt) as (
+  password: crypto.BinaryLike,
+  salt: crypto.BinaryLike,
+  keylen: number
+) => Promise<Buffer>;
+
+export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `scrypt:${salt}:${hash}`;
+  const derived = await scryptAsync(password, salt, 64);
+  return `scrypt:${salt}:${derived.toString('hex')}`;
 }
 
-export function verifyPassword(password: string, storedHash: string): boolean {
+export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   try {
     if (storedHash.startsWith('scrypt:')) {
       const parts = storedHash.split(':');
       if (parts.length !== 3) return false;
       const salt = parts[1];
       const originalHash = parts[2];
-      const derived = crypto.scryptSync(password, salt, 64).toString('hex');
+      const derived = (await scryptAsync(password, salt, 64)).toString('hex');
       const a = Buffer.from(derived, 'hex');
       const b = Buffer.from(originalHash, 'hex');
       if (a.length !== b.length) return false;
@@ -311,9 +326,9 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 const DUMMY_SALT = 'e0f4a8b2c6d19375e0f4a8b2c6d19375';
 const DUMMY_HASH = crypto.scryptSync('dummy_timing_seed_shike_2026', DUMMY_SALT, 64).toString('hex');
 
-export function dummyTimingCheck(password: string): void {
+export async function dummyTimingCheck(password: string): Promise<void> {
   try {
-    const derived = crypto.scryptSync(password, DUMMY_SALT, 64).toString('hex');
+    const derived = (await scryptAsync(password, DUMMY_SALT, 64)).toString('hex');
     const a = Buffer.from(derived, 'hex');
     const b = Buffer.from(DUMMY_HASH, 'hex');
     crypto.timingSafeEqual(a, b);

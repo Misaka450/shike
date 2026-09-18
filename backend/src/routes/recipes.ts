@@ -1,8 +1,15 @@
 import { Hono } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
+import { readJsonBody } from '../middleware/bodyLimit.js';
 import { checkRateLimit, getClientIp } from '../services/authSecurity.js';
-import { CookRecipeRequestSchema, RecommendQuerySchema } from '../schemas/index.js';
+import {
+  AiGenerateRequestSchema,
+  CookRecipeRequestSchema,
+  HistoryQuerySchema,
+  RecommendQuerySchema,
+} from '../schemas/index.js';
 import { listActiveInventory } from '../services/inventoryService.js';
 import {
   cookRecipe,
@@ -34,13 +41,28 @@ recipesRoute.get('/', (c) => {
   });
 });
 
-// GET /history - Get user's cooking history
+// GET /history - Get user's cooking history（支持 limit 与 before 游标分页）
 recipesRoute.get('/history', (c) => {
   const userId = c.get('userId');
-  const history = getCookingHistory(userId);
+  const parsed = HistoryQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) {
+    return c.json(
+      {
+        success: false,
+        code: 'VALIDATION_FAILED',
+        error: '查询参数无效',
+        details: parsed.error.issues,
+      },
+      400
+    );
+  }
+
+  const history = getCookingHistory(userId, parsed.data);
   return c.json({
     success: true,
     data: history,
+    // 返回本页条数，客户端据此判断是否还有下一页
+    count: history.length,
   });
 });
 
@@ -79,7 +101,7 @@ recipesRoute.delete('/:id', (c) => {
           code: err.code,
           error: err.message,
         },
-        err.statusCode as any
+        err.statusCode as ContentfulStatusCode
       );
     }
     console.error('[DELETE /recipes/:id] 删除菜谱失败：', err);
@@ -104,7 +126,7 @@ recipesRoute.delete('/:id', (c) => {
  */
 recipesRoute.post('/recommend', async (c) => {
   const userId = c.get('userId');
-  const rawBody = await c.req.json().catch(() => ({}));
+  const rawBody = (await readJsonBody(c)) as Record<string, any>;
   const queryParams = c.req.query();
 
   const mergedParams = {
@@ -150,19 +172,23 @@ recipesRoute.post('/recommend', async (c) => {
 recipesRoute.post('/ai-generate', async (c) => {
   const userId = c.get('userId');
 
-  const rawBody = await c.req.json().catch(() => ({}));
+  const rawBody = (await readJsonBody(c)) as Record<string, any>;
 
-  // 【修复 ARC-09】统一参数名：以前前端传 preferences、后端读 preference，导致用户偏好从未生效。
-  // 现在两种写法都接受，并限制长度，避免超长内容带进提示词。
-  const rawPreference = rawBody?.preference ?? rawBody?.preferences;
-  const preference =
-    typeof rawPreference === 'string' ? rawPreference.trim().slice(0, 200) : undefined;
-
-  // 生成数量：默认 3 道，允许 1-5 道，防止被滥用
-  const requestedCount = Number(rawBody?.count);
-  const count = Number.isFinite(requestedCount)
-    ? Math.min(5, Math.max(1, Math.trunc(requestedCount)))
-    : 3;
+  // 参数校验统一交给 schema（兼容 preference / preferences 两种历史字段名，
+  // 偏好文本截断到 200 字，数量钳制在 1-5），避免路由里散落手写校验逻辑
+  const parsedBody = AiGenerateRequestSchema.safeParse(rawBody);
+  if (!parsedBody.success) {
+    return c.json(
+      {
+        success: false,
+        code: 'VALIDATION_FAILED',
+        error: '生成参数无效',
+        details: parsedBody.error.issues,
+      },
+      400
+    );
+  }
+  const { preference, count } = parsedBody.data;
 
   const inventory = listActiveInventory(userId);
   if (inventory.length === 0) {
@@ -220,7 +246,7 @@ recipesRoute.post('/ai-generate', async (c) => {
 recipesRoute.post('/:id/cook', async (c) => {
   const userId = c.get('userId');
   const recipeId = c.req.param('id');
-  const rawBody = await c.req.json().catch(() => ({}));
+  const rawBody = (await readJsonBody(c)) as Record<string, any>;
 
   const parsed = CookRecipeRequestSchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -243,10 +269,12 @@ recipesRoute.post('/:id/cook', async (c) => {
       data: result,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '记录烹饪失败';
-    // 菜谱不存在属于用户输入问题，返回 404 而非 500
-    if (message.includes('not found')) {
-      return c.json({ success: false, code: 'NOT_FOUND', error: '菜谱不存在' }, 404);
+    // 【修复 ARC-06】用结构化错误类型判断，不再靠 message 字符串匹配
+    if (err instanceof RecipeError) {
+      return c.json(
+        { success: false, code: err.code, error: err.message },
+        err.statusCode as ContentfulStatusCode
+      );
     }
     console.error('[POST /recipes/:id/cook] 记录烹饪失败：', err);
     return c.json({ success: false, code: 'COOK_FAILED', error: '记录烹饪失败，请稍后重试' }, 500);

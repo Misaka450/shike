@@ -32,4 +32,21 @@ describe('isIngredientMatch（食材名匹配）', () => {
     assert.equal(isIngredientMatch('西红柿', ''), false);
     assert.equal(isIngredientMatch('   ', '西红柿'), false);
   });
+
+  it('不同肉类的同名制品不应互相匹配（牛肉末 / 猪肉末）', () => {
+    // 回归用例：旧实现走模糊包含判断，"牛肉末"会因包含"肉末"被算进"猪肉"分组，
+    // 于是冰箱里的猪肉末会被当成牛肉末的替代品
+    assert.equal(isIngredientMatch('牛肉末', '猪肉末'), false);
+    assert.equal(isIngredientMatch('猪肉末', '牛肉末'), false);
+  });
+
+  it('不同肉类的同名部位不应互相匹配（牛排 / 猪排）', () => {
+    assert.equal(isIngredientMatch('牛排', '猪排'), false);
+    assert.equal(isIngredientMatch('猪排', '牛排'), false);
+  });
+
+  it('带修饰词的写法仍应匹配到同义词（有机土豆 / 马铃薯）', () => {
+    // 非标准叫法走模糊兜底路径，保证没有回归
+    assert.equal(isIngredientMatch('有机土豆', '马铃薯'), true);
+  });
 });

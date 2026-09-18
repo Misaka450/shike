@@ -165,3 +165,49 @@ export const CookRecipeRequestSchema = z.object({
 });
 
 export type CookRecipeRequest = z.input<typeof CookRecipeRequestSchema>;
+
+/**
+ * AI 菜谱生成请求（修复 SEC-03 / ARC-09）
+ *
+ * 之前路由直接把 req.json() 的裸对象往下传：
+ * - preference 未做长度限制，超长文本会被原样拼进提示词，放大 token 消耗甚至撑爆上游限制；
+ * - count 未做范围限制，客户端传 9999 会让提示词要求模型一次产出上万道菜。
+ * 现在统一在入口做裁剪与钳制：偏好文本截断到 200 字，数量限制在 1-5。
+ *
+ * 字段同时兼容 preference 与 preferences 两种历史叫法，避免破坏已发布的客户端。
+ */
+export const AiGenerateRequestSchema = z
+  .object({
+    preference: z.string().optional(),
+    preferences: z.string().optional(),
+    count: z.coerce.number().int().min(1).max(5).default(3),
+  })
+  .transform((value) => ({
+    preference: (value.preference ?? value.preferences ?? '').trim().slice(0, 200) || undefined,
+    count: value.count,
+  }));
+
+export type AiGenerateRequest = z.output<typeof AiGenerateRequestSchema>;
+
+/**
+ * 烹饪历史查询参数（修复 PER-03）
+ * 旧接口一次性 SELECT 全部历史记录，用户做菜越多返回体越大、响应越慢。
+ * 改为默认返回最近 50 条，并支持用 before 游标继续往前翻。
+ */
+export const HistoryQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  before: z.string().optional(),
+});
+
+export type HistoryQuery = z.output<typeof HistoryQuerySchema>;
+
+/** 烹饪历史条目（ingredients_used 已从 JSON 字符串还原为数组） */
+export interface CookingHistoryEntry {
+  id: number;
+  user_id: string;
+  recipe_id: string;
+  recipe_name: string;
+  cooked_at: string;
+  ingredients_used: string[];
+  notes: string;
+}

@@ -22,8 +22,22 @@ export const config = {
   /** CPA 访问凭据 */
   CPA_API_KEY: process.env.CPA_API_KEY || '',
 
-  /** SQLite 数据库文件路径 */
-  DB_PATH: process.env.DB_PATH || '/opt/shike-ai/data/db/shike.db',
+  /** 文本生成（AI 菜谱定制）使用的 CPA 模型名 */
+  CPA_TEXT_MODEL: process.env.CPA_TEXT_MODEL || 'gemini-3.8-flash-high',
+
+  /** 视觉识别（冰箱拍照识图）使用的 CPA 模型名单，逗号分隔，按顺序依次尝试 */
+  CPA_VISION_MODELS: (
+    process.env.CPA_VISION_MODELS || 'gemini-3.8-flash-high,gemini-2.5-flash'
+  )
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean),
+
+  /**
+   * SQLite 数据库文件路径
+   * 默认使用相对路径（本地开发友好）；Docker 部署时由 docker-compose.yml 显式指定绝对路径
+   */
+  DB_PATH: process.env.DB_PATH || './data/db/shike.db',
 
   /** 允许跨域访问的来源白名单（英文逗号分隔），取代原先的通配符 * */
   CORS_ORIGINS: (process.env.CORS_ORIGINS || 'http://127.0.0.1:3002,http://localhost:3002')
@@ -43,6 +57,13 @@ export const config = {
 
   /** 单张上传图片的体积上限（字节），默认 5MB */
   MAX_UPLOAD_BYTES: envInt(process.env.MAX_UPLOAD_BYTES, 5 * 1024 * 1024),
+
+  /**
+   * 单个请求体的全局体积上限（字节），默认 15MB
+   * 在 fetch 入口以流式计数方式强制执行，即使客户端使用 chunked 传输
+   * （不声明 Content-Length）也无法绕过，防止超大请求把内存打爆
+   */
+  MAX_BODY_BYTES: envInt(process.env.MAX_BODY_BYTES, 15 * 1024 * 1024),
 
   /** 调用 CPA 上游服务的超时时间（毫秒），防止上游挂起导致请求永久等待 */
   CPA_TIMEOUT_MS: envInt(process.env.CPA_TIMEOUT_MS, 30_000),

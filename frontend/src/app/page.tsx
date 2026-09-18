@@ -126,6 +126,14 @@ export default function ShikeApp() {
   const [selectedScanItems, setSelectedScanItems] = useState<Record<number, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 【修复 MEM-01】统一在预览地址变化时释放上一个 blob URL（组件卸载时也会释放）。
+  // 旧实现只在「换一张图」时手动 revoke，关闭弹窗 / 直接置空等路径都会漏掉，
+  // 反复拍照会让浏览器里堆积无法回收的对象 URL。
+  useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
   // Manual Add Form State
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -168,6 +176,13 @@ export default function ShikeApp() {
       setRecipes(rec.recommendations || []);
     } catch (err: any) {
       console.error('Failed to load initial data:', err);
+      // 【修复 UX-02】旧实现静默吞掉加载失败，用户只看到一片空白却不知道发生了什么
+      if (err?.code === 'SESSION_EXPIRED') {
+        showToast('登录已过期，请重新登录');
+        setShowAuthModal(true);
+      } else {
+        showToast(err?.message || '加载数据失败，请稍后重试');
+      }
     } finally {
       setLoadingInventory(false);
       setLoadingRecipes(false);
@@ -213,13 +228,17 @@ export default function ShikeApp() {
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
-      showToast(`图片过大（${(file.size / 1024 / 1024).toFixed(1)}MB），请压缩到 5MB 以内`);
+      // 上限文案跟随 MAX_UPLOAD_BYTES，改配置后提示不会与实际限制脱节
+      showToast(
+        `图片过大（${(file.size / 1024 / 1024).toFixed(1)}MB），请压缩到 ${(
+          MAX_UPLOAD_BYTES /
+          1024 /
+          1024
+        ).toFixed(0)}MB 以内`
+      );
       e.target.value = '';
       return;
     }
-
-    // 释放上一次创建的预览地址，避免浏览器内存持续增长
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
 
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
@@ -711,6 +730,8 @@ export default function ShikeApp() {
                         src={recipe.image_url || '/images/tomato_egg.webp'}
                         alt={recipe.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        // 菜谱封面多为外链大图且位于长列表下方，懒加载可显著减少首屏请求数
+                        loading="lazy"
                         onError={(e: any) => {
                           e.target.src = '/images/tomato_egg.webp';
                         }}
@@ -925,7 +946,7 @@ export default function ShikeApp() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-xs text-slate-900">{item.name}</span>
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                            <span className="text-[10px] px-1.5 py-[2px] rounded bg-slate-100 text-slate-600">
                               {item.category}
                             </span>
                           </div>
@@ -1039,7 +1060,7 @@ export default function ShikeApp() {
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-sm text-slate-900">{item.name}</span>
-                            <span className="text-[10px] text-slate-500 px-1.5 py-0.2 bg-slate-100 rounded">
+                            <span className="text-[10px] text-slate-500 px-1.5 py-[2px] bg-slate-100 rounded">
                               {item.category}
                             </span>
                           </div>
@@ -1160,6 +1181,7 @@ export default function ShikeApp() {
                 src={selectedRecipe.image_url || '/images/tomato_egg.webp'}
                 alt={selectedRecipe.name}
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
               <button
                 onClick={() => setSelectedRecipe(null)}

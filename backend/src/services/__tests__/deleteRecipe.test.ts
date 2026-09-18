@@ -13,8 +13,13 @@ const {
   recommendRecipes,
   invalidateRecipeCache,
   isRecipeVisibleTo,
+  initSeedRecipes,
 } = await import('../recipeService.js');
-const { db } = await import('../../db/index.js');
+const { db, runMigrations } = await import('../../db/index.js');
+
+// 迁移与内置菜谱播种不再随模块 import 自动执行，测试需显式初始化一次
+runMigrations();
+initSeedRecipes();
 
 const OWNER_A = 'usr_owner_a';
 const OWNER_B = 'usr_owner_b';

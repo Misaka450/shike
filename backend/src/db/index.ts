@@ -1,4 +1,5 @@
 import Database, { type Database as DatabaseType } from 'better-sqlite3';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
@@ -128,6 +129,25 @@ const MIGRATIONS: Array<(database: DatabaseType) => void> = [
       CREATE INDEX IF NOT EXISTS idx_recipes_owner ON recipes (owner_id);
     `);
   },
+
+  // v3 -> v4：会话令牌从明文落库改为哈希落库（安全加固）
+  // 旧版把登录令牌明文存进 sessions 表，一旦数据库文件泄露，
+  // 攻击者可以直接拿令牌冒充任意用户。现在统一存 sha256 摘要
+  // （算法与 sessionService.hashToken 保持一致），明文只在签发瞬间返回客户端。
+  (database) => {
+    // 只处理仍以 tok_ 开头的存量明文令牌；
+    // sha256 十六进制摘要只含 0-9/a-f，不可能以 "tok" 开头，因此不会误迁移
+    const rows = database
+      .prepare("SELECT token FROM sessions WHERE token LIKE 'tok_%'")
+      .all() as Array<{ token: string }>;
+    if (rows.length === 0) return;
+
+    const update = database.prepare('UPDATE sessions SET token = ? WHERE token = ?');
+    for (const row of rows) {
+      update.run(createHash('sha256').update(row.token).digest('hex'), row.token);
+    }
+    console.log(`🔐 已将 ${rows.length} 条存量会话令牌迁移为哈希存储`);
+  },
 ];
 
 /**
@@ -148,7 +168,7 @@ export function runMigrations(): void {
   }
 }
 
-// 模块加载时立即执行迁移，确保任何查询开始前结构已就绪
-runMigrations();
-
+// 注意：迁移不再随模块 import 自动执行。
+// 服务入口（src/index.ts）与测试文件必须显式调用 runMigrations()，
+// 避免「仅仅 import 一个模块就对数据库产生写入」的隐式副作用。
 export default db;

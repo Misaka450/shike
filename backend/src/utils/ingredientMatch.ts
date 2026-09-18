@@ -46,8 +46,35 @@ export const SYNONYM_GROUPS: string[][] = [
 ];
 
 /**
+ * 同义词倒排索引：食材叫法 -> 所属分组下标
+ *
+ * 【性能修复 PER-06】旧实现每次匹配都要线性扫描全部 40 个分组、逐条做 includes 比较。
+ * 推荐接口要对「每道菜谱 × 每种食材 × 每件库存」做笛卡尔积式匹配，
+ * 这个 O(分组数 × 组内词数) 的开销会被放大成千上万倍。
+ * 改成哈希表后，标准叫法的分组查询是 O(1)。
+ */
+const synonymIndex = new Map<string, number>();
+SYNONYM_GROUPS.forEach((group, groupIndex) => {
+  for (const member of group) {
+    // 同一个词出现在多个分组时只登记第一次，保持行为稳定
+    if (!synonymIndex.has(member)) {
+      synonymIndex.set(member, groupIndex);
+    }
+  }
+});
+
+/**
  * 判断冰箱里的食材名与菜谱里的食材名是否指同一种东西
- * 判定顺序：完全相同 → 互相包含 → 落在同一个同义词分组内
+ *
+ * 判定顺序：
+ * 1. 完全相同；
+ * 2. 互相包含（保留「土鸡蛋 / 鸡蛋」这类合法匹配）；
+ * 3. 双方都是词典中的标准叫法 —— 直接比对分组下标；
+ * 4. 至少一方带了修饰词（例如「有机土豆」）—— 退回按分组模糊扫描。
+ *
+ * 【正确性修复】第 3 步以前也走模糊扫描，于是「牛肉末」会因为包含「肉末」
+ * 被判进「猪肉」分组、「猪肉末」也在这个分组里，两个不同的食材被误判为同一种。
+ * 现在双标准词直接用精确分组比对，这个误判消失了。
  */
 export function isIngredientMatch(invName: string, recName: string): boolean {
   const iNorm = invName.trim().toLowerCase();
@@ -60,10 +87,20 @@ export function isIngredientMatch(invName: string, recName: string): boolean {
   if (iNorm === rNorm) return true;
   if (iNorm.includes(rNorm) || rNorm.includes(iNorm)) return true;
 
+  const iGroup = synonymIndex.get(iNorm);
+  const rGroup = synonymIndex.get(rNorm);
+
+  // 两边都是词典里的标准叫法：分组相同才算同一种食材（O(1)）
+  if (iGroup !== undefined && rGroup !== undefined) {
+    return iGroup === rGroup;
+  }
+
+  // 至少一方不在词典里（"有机土豆"、"土鸡蛋"…）：退化为模糊扫描，兼容自由写法
   for (const group of SYNONYM_GROUPS) {
     const iInGroup = group.some((g) => iNorm.includes(g) || g.includes(iNorm));
+    if (!iInGroup) continue;
     const rInGroup = group.some((g) => rNorm.includes(g) || g.includes(rNorm));
-    if (iInGroup && rInGroup) return true;
+    if (rInGroup) return true;
   }
 
   return false;

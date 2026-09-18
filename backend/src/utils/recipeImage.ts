@@ -115,7 +115,10 @@ export function selectRecipeImage(
 
   // 1. 番茄炒蛋 / 西红柿炒蛋 (优先本地高质量 WebP)
   if (
-    (('西红柿' in windowOrEmpty(name) || name.includes('西红柿') || name.includes('番茄')) &&
+    // 注意：这里曾是 `'西红柿' in windowOrEmpty(name)`，
+    // 但 windowOrEmpty 返回的是数组，而 `in` 对数组判断的是"下标是否存在"，
+    // 所以那个条件恒为 false，属于无效判断，已删除
+    ((name.includes('西红柿') || name.includes('番茄')) &&
       (name.includes('炒蛋') || name.includes('炒鸡蛋') || name.includes('滑蛋') || name.includes('煎蛋'))) ||
     ['西红柿炒蛋', '番茄炒蛋', '番茄炒鸡蛋', '西红柿炒鸡蛋', '番茄鸡蛋'].some((k) => name.includes(k))
   ) {
@@ -139,32 +142,32 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.baking_dessert;
   }
 
-  // 3. 茄子 / 地三鲜
+  // 4. 茄子 / 地三鲜
   if (['地三鲜', '茄子', '风味茄子', '鱼香茄子', '烤茄子', '烧茄子'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.eggplant;
   }
 
-  // 4. 土豆 / 酸辣土豆丝 / 薯条
+  // 5. 土豆 / 酸辣土豆丝 / 薯条
   if (['土豆', '马铃薯', '洋芋', '薯条'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.potato;
   }
 
-  // 5. 鸡翅 / 可乐鸡翅 / 烤全翅
+  // 6. 鸡翅 / 可乐鸡翅 / 烤全翅
   if (['鸡翅', '烤翅', '鸡中翅', '鸡翅尖', '炸鸡翅', '蒜香鸡翅', '全翅', '烤全翅'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.chicken_wings;
   }
 
-  // 6. 豆腐 / 麻婆豆腐
+  // 7. 豆腐 / 麻婆豆腐
   if (['豆腐', '豆花', '臭豆腐', '腐竹', '千张'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.tofu;
   }
 
-  // 7. 排骨 / 糖醋排骨 / 红烧排骨
+  // 8. 排骨 / 糖醋排骨 / 红烧排骨
   if (['排骨', '肋排', '小排', '排条', '糖醋排骨', '红烧排骨', '粉蒸排骨'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.ribs;
   }
 
-  // 8. 红烧肉 / 五花肉 / 回锅肉 / 扣肉 / 卤肉 / 肘子 / 猪蹄 / 蹄花
+  // 9. 红烧肉 / 五花肉 / 回锅肉 / 扣肉 / 卤肉 / 肘子 / 猪蹄 / 蹄花
   if (
     [
       '红烧肉', '五花肉', '回锅肉', '东坡肉', '扣肉', '卤肉', '把子肉', '商芝肉',
@@ -174,7 +177,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.braised_pork;
   }
 
-  // 9. 面食 / 拉面 / 拌面 / 凉皮 / 米线 / 炒面 / 意面
+  // 10. 面食 / 拉面 / 拌面 / 凉皮 / 米线 / 炒面 / 意面
   if (
     [
       '面', '拉面', '拌面', '汤面', '炒面', '葱油面', '米线', '米粉', '意面',
@@ -184,7 +187,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.noodles;
   }
 
-  // 10. 炒饭 / 米饭 / 粥 / 煲仔饭 / 盖浇饭
+  // 11. 炒饭 / 米饭 / 粥 / 煲仔饭 / 盖浇饭
   if (
     [
       '炒饭', '米饭', '蛋炒饭', '煲仔饭', '盖浇饭', '卤肉饭', '拌饭', '粥', '泡饭',
@@ -194,7 +197,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.rice_staple;
   }
 
-  // 11. 饺子 / 面点 / 馄饨 / 包子 / 锅贴 / 点心 / 饼 / 烧卖
+  // 12. 饺子 / 面点 / 馄饨 / 包子 / 锅贴 / 点心 / 饼 / 烧卖
   if (
     [
       '饺', '水饺', '煎饺', '锅贴', '馄饨', '云吞', '抄手', '包子', '小笼包',
@@ -205,7 +208,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.dumplings_dimsum;
   }
 
-  // 12. 鸡蛋 / 荷包蛋 / 鸡蛋羹 / 蒸蛋 / 煎蛋 / 蛋卷
+  // 13. 鸡蛋 / 荷包蛋 / 鸡蛋羹 / 蒸蛋 / 煎蛋 / 蛋卷
   if (
     [
       '荷包蛋', '蛋羹', '鸡蛋羹', '蒸蛋', '煎蛋', '金钱蛋', '滑蛋', '蛋花', '爆蛋',
@@ -216,7 +219,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.egg_dishes;
   }
 
-  // 13. 鱼类 / 鲈鱼 / 水煮鱼 / 三文鱼 / 鲤鱼 / 鳕鱼 / 鳝鱼 (排除“鱼香”复合风味)
+  // 14. 鱼类 / 鲈鱼 / 水煮鱼 / 三文鱼 / 鲤鱼 / 鳕鱼 / 鳝鱼 (排除“鱼香”复合风味)
   if (
     [
       '鱼', '鲈鱼', '三文鱼', '巴沙鱼', '带鱼', '黄花鱼', '鲫鱼', '草鱼', '鲤鱼',
@@ -226,7 +229,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.fish;
   }
 
-  // 14. 虾 / 虾仁 / 海鲜 / 贝类 / 蟹 / 蛤蜊 / 鱿鱼 / 海参
+  // 15. 虾 / 虾仁 / 海鲜 / 贝类 / 蟹 / 蛤蜊 / 鱿鱼 / 海参
   if (
     [
       '虾', '虾仁', '基围虾', '大虾', '蛤蜊', '海鲜', '生蚝', '扇贝', '花甲',
@@ -236,7 +239,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.shrimp_seafood;
   }
 
-  // 15. 牛肉 / 牛柳 / 水煮牛肉 / 肥牛 / 牛腩 / 孜然牛肉
+  // 16. 牛肉 / 牛柳 / 水煮牛肉 / 肥牛 / 牛腩 / 孜然牛肉
   if (
     [
       '牛', '肥牛', '牛柳', '牛腩', '水煮牛肉', '牛排', '牛蛙', '黄牛肉', '牛筋',
@@ -246,7 +249,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.beef;
   }
 
-  // 16. 鸡肉 (过滤 '鸡蛋', '鸡精' 干扰)
+  // 17. 鸡肉 (过滤 '鸡蛋', '鸡精' 干扰)
   if (
     [
       '鸡', '宫保鸡丁', '辣子鸡', '黄焖鸡', '大盘鸡', '口水鸡', '鸡丁', '鸡块',
@@ -256,17 +259,17 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.chicken;
   }
 
-  // 17. 鸭肉 / 烤鸭 / 啤酒鸭
+  // 18. 鸭肉 / 烤鸭 / 啤酒鸭
   if (['鸭', '啤酒鸭', '烤鸭', '盐水鸭', '酱鸭', '鸭肉', '鸭腿'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.duck;
   }
 
-  // 18. 羊肉 / 羊排 / 羊肉串 / 孜然羊肉
+  // 19. 羊肉 / 羊排 / 羊肉串 / 孜然羊肉
   if (['羊', '羊肉', '羊排', '羊蝎子', '羊腿', '羊肉串'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.lamb;
   }
 
-  // 19. 小炒肉 / 肉丝 / 肉末 / 炒肉 / 锅包肉 / 猪肉 / 里脊
+  // 20. 小炒肉 / 肉丝 / 肉末 / 炒肉 / 锅包肉 / 猪肉 / 里脊
   if (
     [
       '小炒肉', '肉丝', '鱼香肉丝', '青椒肉丝', '肉末', '一碗香', '过油肉', '肉片',
@@ -277,22 +280,22 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.stir_fry_pork;
   }
 
-  // 20. 鸡蛋类名称补充
+  // 21. 鸡蛋类名称补充
   if (name.includes('蛋')) {
     return RECIPE_IMAGE_MAP.egg_dishes;
   }
 
-  // 21. 黄瓜 / 凉拌菜 / 拍黄瓜 / 皮蛋
+  // 22. 黄瓜 / 凉拌菜 / 拍黄瓜 / 皮蛋
   if (['拍黄瓜', '黄瓜', '凉拌', '皮蛋', '凉菜', '泡菜', '腌黄瓜', '冷吃'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.cucumber_cold;
   }
 
-  // 22. 菌菇 / 香菇 / 金针菇 / 杏鲍菇 / 木耳
+  // 23. 菌菇 / 香菇 / 金针菇 / 杏鲍菇 / 木耳
   if (['蘑菇', '香菇', '金针菇', '杏鲍菇', '平菇', '菌菇', '银耳', '木耳', '菇'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.mushroom;
   }
 
-  // 23. 绿叶蔬菜 / 西兰花 / 炒青菜 / 包菜 / 空心菜 / 四季豆
+  // 24. 绿叶蔬菜 / 西兰花 / 炒青菜 / 包菜 / 空心菜 / 四季豆
   if (
     [
       '西兰花', '青菜', '生菜', '空心菜', '油麦菜', '菠菜', '娃娃菜', '包菜',
@@ -304,7 +307,7 @@ export function selectRecipeImage(
     return RECIPE_IMAGE_MAP.greens_veggies;
   }
 
-  // 24. 汤羹 / 靓汤 / 炖汤 / 肉丸汤 / 鲜汤
+  // 25. 汤羹 / 靓汤 / 炖汤 / 肉丸汤 / 鲜汤
   if (['汤', '羹', '煲'].some((k) => name.includes(k))) {
     return RECIPE_IMAGE_MAP.soup_stew;
   }
@@ -338,8 +341,4 @@ export function selectRecipeImage(
   }
 
   return RECIPE_IMAGE_MAP.fallback_chinese_hot;
-}
-
-function windowOrEmpty(str: string): string[] {
-  return [str];
 }

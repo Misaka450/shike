@@ -6,8 +6,14 @@ import type { InventoryItem } from '../../schemas/index.js';
 process.env.DB_PATH = ':memory:';
 
 // 动态导入：保证 DB_PATH 在模块初始化前生效
-const { recommendRecipes, invalidateRecipeCache } = await import('../recipeService.js');
-const { db } = await import('../../db/index.js');
+const { recommendRecipes, invalidateRecipeCache, initSeedRecipes } = await import(
+  '../recipeService.js'
+);
+const { db, runMigrations } = await import('../../db/index.js');
+
+// 迁移与内置菜谱播种不再随模块 import 自动执行，测试需显式初始化一次
+runMigrations();
+initSeedRecipes();
 
 function insertMockAiRecipe(
   id: string,

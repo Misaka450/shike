@@ -20,6 +20,15 @@ function generateToken(): string {
 }
 
 /**
+ * 令牌入库前先做 sha256 摘要（与数据库迁移 v4 配套）
+ * 【安全加固】sessions 表不再保存令牌明文：即使数据库文件被拖走，
+ * 攻击者拿到的也只是不可逆摘要，无法用来冒充用户会话。
+ */
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/**
  * 生成用户 ID
  * 【安全修复 SEC-02】一律使用完整 UUID（128 bit 熵），
  * 不再像旧版那样只截取 8 位十六进制字符（仅 32 bit，存在被枚举的风险）。
@@ -38,7 +47,7 @@ export function createSession(userId: string): SessionInfo {
 
   db.prepare(
     'INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
-  ).run(token, userId, now.toISOString(), expiresAt);
+  ).run(hashToken(token), userId, now.toISOString(), expiresAt);
 
   return { token, userId, expiresAt };
 }
@@ -50,9 +59,10 @@ export function createSession(userId: string): SessionInfo {
 export function resolveSession(token: string): string | null {
   if (!token) return null;
 
+  // 库中存的是令牌摘要，查询前先做同样的 sha256
   const row = db
     .prepare('SELECT user_id, expires_at FROM sessions WHERE token = ?')
-    .get(token) as { user_id: string; expires_at: string } | undefined;
+    .get(hashToken(token)) as { user_id: string; expires_at: string } | undefined;
 
   if (!row) return null;
 
@@ -66,7 +76,7 @@ export function resolveSession(token: string): string | null {
 
 /** 销毁单个会话（用户主动退出登录时调用，让令牌立即失效） */
 export function destroySession(token: string): void {
-  db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+  db.prepare('DELETE FROM sessions WHERE token = ?').run(hashToken(token));
 }
 
 /** 清理所有已过期会话，返回清理条数（由定时任务周期调用） */

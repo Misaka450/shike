@@ -59,6 +59,32 @@ export function hasSession(): boolean {
 }
 
 /**
+ * 带状态码与业务码的错误类型
+ * 之前所有失败都抛裸 Error，调用方只能靠 message 文本区分，
+ * 现在可以据 code / status 精确处理（例如识别到 SESSION_EXPIRED 就弹出登录框）。
+ */
+export class ApiError extends Error {
+  status?: number;
+  code?: string;
+  /** 被限流时建议等待的秒数（登录失败锁定、AI 生成限流等场景） */
+  remaining_seconds?: number;
+
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** 清理本地会话（令牌 + 资料缓存），用于令牌失效时回到未登录状态 */
+export function clearSession(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(PROFILE_KEY);
+}
+
+/**
  * 确保存在可用会话
  * 没有令牌时自动向服务端申请一个访客会话；
  * 若本地存在老版本遗留的用户 ID，会一并提交，让服务端把该设备此前录入的食材迁移过来。
@@ -102,22 +128,26 @@ function doFetch(path: string, options: RequestInit, token: string | null): Prom
   return fetch(`${API_BASE}${path}`, { ...options, headers });
 }
 
+/** 按状态码给出兜底提示文案（响应体里没有 error 字段时使用） */
+function statusFallbackMessage(status: number): string {
+  if (status === 401) return '登录状态已失效，请重新登录';
+  if (status === 413) return '内容过大，请压缩后重试';
+  if (status === 429) return '操作过于频繁，请稍后再试';
+  return `请求失败（${status}）`;
+}
+
 /** 从错误响应中提取对用户友好的提示文案 */
 async function toErrorMessage(response: Response): Promise<string> {
   const json = await response.json().catch(() => null);
   if (json && typeof json === 'object' && typeof (json as { error?: string }).error === 'string') {
     return (json as { error: string }).error;
   }
-  if (response.status === 401) return '登录状态已失效，请重新登录';
-  if (response.status === 413) return '内容过大，请压缩后重试';
-  if (response.status === 429) return '操作过于频繁，请稍后再试';
-  return `请求失败（${response.status}）`;
+  return statusFallbackMessage(response.status);
 }
 
 /**
  * 统一请求入口
- * 自动确保会话有效；遇到 401 会自动重建访客会话并重试一次，
- * 避免令牌过期后用户直接看到"登录失效"而无从操作。
+ * 自动确保会话有效；遇到 401 时按身份分别处理（见下方注释）。
  */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   await ensureSession();
@@ -125,19 +155,35 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response = await doFetch(path, options, getToken());
 
   if (response.status === 401) {
-    // 令牌过期或被服务端作废：清掉本地令牌，重新申请访客会话后重试一次
+    // 【修复 UX-01】旧实现无论什么身份，401 都一律清掉令牌、重建访客会话并重试。
+    // 对正式账号来说这是"静默降级"：用户以为自己还登录着，
+    // 后续录入的数据却全写进了新建的访客会话，表现为数据凭空消失。
+    // 现在正式账号直接抛出会话过期错误，由界面引导用户重新登录；
+    // 访客会话本来就是临时的，仍保留自动重建并重试一次的行为。
+    if (getCurrentUser().is_guest === false) {
+      clearSession();
+      throw new ApiError('登录已过期，请重新登录', 401, 'SESSION_EXPIRED');
+    }
+
     if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
     await ensureSession();
     response = await doFetch(path, options, getToken());
   }
 
   if (!response.ok) {
-    throw new Error(await toErrorMessage(response));
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: string; code?: string }
+      | null;
+    throw new ApiError(
+      payload?.error || statusFallbackMessage(response.status),
+      response.status,
+      payload?.code
+    );
   }
 
   const json = await response.json();
   if (json && typeof json === 'object' && 'success' in json && !json.success) {
-    throw new Error(json.error || '接口操作失败');
+    throw new ApiError(json.error || '接口操作失败', response.status, json.code);
   }
 
   return json.data !== undefined ? json.data : json;
@@ -174,10 +220,8 @@ export async function loginUser(
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok || !json.success) {
-    const error: Error & { status?: number; remaining_seconds?: number } = new Error(
-      json.error || '登录失败'
-    );
-    error.status = res.status;
+    const error = new ApiError(json.error || '登录失败', res.status, json.code);
+    // 账号被防爆破锁定时会返回建议等待秒数
     error.remaining_seconds = json.remaining_seconds;
     throw error;
   }
@@ -207,9 +251,7 @@ export async function registerUser(
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok || !json.success) {
-    const error: Error & { status?: number } = new Error(json.error || '注册失败');
-    error.status = res.status;
-    throw error;
+    throw new ApiError(json.error || '注册失败', res.status, json.code);
   }
 
   persistSession(json.data);
@@ -284,12 +326,12 @@ export async function scanFridgeImage(file: File): Promise<FridgeScanResult> {
   );
 
   if (!response.ok) {
-    throw new Error(await toErrorMessage(response));
+    throw new ApiError(await toErrorMessage(response), response.status);
   }
 
   const json = await response.json();
   if (!json.success) {
-    throw new Error(json.error || '识别失败');
+    throw new ApiError(json.error || '识别失败', response.status, json.code);
   }
 
   return json.data;
@@ -342,5 +384,14 @@ export async function deleteRecipe(recipeId: string): Promise<void> {
   });
 }
 
-/** 请求最大图片体积（用于前端提前拦截超大文件，与后端保持一致） */
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+/**
+ * 图片上传体积上限（用于前端提前拦截超大文件）
+ * 之前是写死的常量，改上限要同时改后端配置并重新构建前端；
+ * 现在支持用 NEXT_PUBLIC_MAX_UPLOAD_BYTES 注入，与后端 MAX_UPLOAD_BYTES 保持一致即可。
+ */
+export const MAX_UPLOAD_BYTES = Number.parseInt(
+  process.env.NEXT_PUBLIC_MAX_UPLOAD_BYTES || '',
+  10
+) > 0
+  ? Number.parseInt(process.env.NEXT_PUBLIC_MAX_UPLOAD_BYTES as string, 10)
+  : 5 * 1024 * 1024;

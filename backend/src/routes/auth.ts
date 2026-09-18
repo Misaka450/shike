@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { db } from '../db/index.js';
 import type { AppEnv } from '../middleware/auth.js';
+import { readJsonBody } from '../middleware/bodyLimit.js';
 import { extractToken, optionalAuth, requireAuth } from '../middleware/auth.js';
 import {
   createCaptcha,
@@ -55,7 +56,7 @@ authRoute.get('/captcha', (c) => {
  * 用于把该设备此前录入的食材一次性迁移到新会话下（详见 sessionService.claimLegacyGuestData）。
  */
 authRoute.post('/guest', optionalAuth, async (c) => {
-  const body = await c.req.json().catch(() => ({}));
+  const body = (await readJsonBody(c)) as Record<string, any>;
   const legacyUserId =
     typeof body?.legacy_user_id === 'string' ? body.legacy_user_id.trim() : '';
 
@@ -102,7 +103,7 @@ authRoute.post('/guest', optionalAuth, async (c) => {
 
 // POST /register - 自定义用户名注册
 authRoute.post('/register', optionalAuth, async (c) => {
-  const body = await c.req.json().catch(() => ({}));
+  const body = (await readJsonBody(c)) as Record<string, any>;
   const { username, password, nickname, captcha_key, captcha_code } = body;
 
   // 1. 验证码校验
@@ -130,6 +131,7 @@ authRoute.post('/register', optionalAuth, async (c) => {
     );
   }
 
+  // 先做一次存在性检查，让绝大多数「用户名已存在」的请求无需消耗 scrypt 计算
   const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUser);
   if (existing) {
     return c.json({ success: false, code: 'USERNAME_TAKEN', error: '该用户名已被注册，请直接登录' }, 409);
@@ -137,14 +139,30 @@ authRoute.post('/register', optionalAuth, async (c) => {
 
   // 3. 创建账号（用户 ID 使用完整 UUID，不再截断）
   const userId = generateUserId('usr');
-  const passwordHash = hashPassword(password);
+  const passwordHash = await hashPassword(password);
   const now = new Date().toISOString();
   const userNick = sanitizeNickname(nickname, cleanUser);
 
-  db.prepare(`
-    INSERT INTO users (id, username, password_hash, nickname, avatar, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(userId, cleanUser, passwordHash, userNick, DEFAULT_AVATAR, now, now);
+  // 【并发修复】上面的 SELECT 与这里的 INSERT 之间存在时间窗口：
+  // 两个请求同时注册同名账号时，后一个会在 INSERT 上撞 UNIQUE 约束。
+  // 不捕获的话异常会一路冒泡成 500，客户端看到的是「服务器错误」而不是「用户名被占用」。
+  try {
+    db.prepare(`
+      INSERT INTO users (id, username, password_hash, nickname, avatar, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, cleanUser, passwordHash, userNick, DEFAULT_AVATAR, now, now);
+  } catch (err) {
+    // better-sqlite3 的错误对象带 code 字段（形如 SQLITE_CONSTRAINT_UNIQUE），
+    // 这里用鸭子类型判断，避免为了拿 code 去断言具体错误类
+    const code = (err as { code?: unknown } | null)?.code;
+    if (typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT')) {
+      return c.json(
+        { success: false, code: 'USERNAME_TAKEN', error: '该用户名已被注册，请直接登录' },
+        409
+      );
+    }
+    throw err;
+  }
 
   // 4. 迁移当前访客会话名下的数据
   // 【安全修复 SEC-02】身份取自服务端会话（客户端无法伪造），
@@ -179,7 +197,7 @@ authRoute.post('/register', optionalAuth, async (c) => {
 // POST /login - 账号密码登录
 authRoute.post('/login', optionalAuth, async (c) => {
   const ip = getClientIp(c);
-  const body = await c.req.json().catch(() => ({}));
+  const body = (await readJsonBody(c)) as Record<string, any>;
   const { username, password, captcha_key, captcha_code } = body;
 
   const cleanUser = typeof username === 'string' ? username.trim().toLowerCase() : '';
@@ -220,10 +238,10 @@ authRoute.post('/login', optionalAuth, async (c) => {
 
   let passwordValid = false;
   if (user && user.password_hash) {
-    passwordValid = verifyPassword(password, user.password_hash);
+    passwordValid = await verifyPassword(password, user.password_hash);
   } else {
     // 假用户恒定耗时检查，防止基于响应时间的用户枚举攻击
-    dummyTimingCheck(password);
+    await dummyTimingCheck(password);
   }
 
   if (!user || !passwordValid) {
@@ -247,7 +265,7 @@ authRoute.post('/login', optionalAuth, async (c) => {
 
   // 透明升级：若用户仍为旧版 sha256 密码哈希，自动升级为高安全性 scrypt 哈希
   if (user.password_hash && !user.password_hash.startsWith('scrypt:')) {
-    const upgradedHash = hashPassword(password);
+    const upgradedHash = await hashPassword(password);
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(upgradedHash, user.id);
   }
 

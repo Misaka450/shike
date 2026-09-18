@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { config } from './config.js';
 import { db } from './db/index.js';
 import type { AppEnv } from './middleware/auth.js';
+import { bodyLimitResponse, isBodyLimitError } from './middleware/bodyLimit.js';
 import { authRoute } from './routes/auth.js';
 import { inventoryRoute } from './routes/inventory.js';
 import { recipesRoute } from './routes/recipes.js';
@@ -126,6 +127,11 @@ app.notFound((c) => {
  * 现在细节只写入服务端日志，对外统一返回友好文案。
  */
 app.onError((err, c) => {
+  // 请求体超限：这是调用方的问题（413），不应记成服务端 500 内部错误
+  if (isBodyLimitError(err)) {
+    return bodyLimitResponse(config.MAX_BODY_BYTES);
+  }
+
   console.error(`[App Error] ${c.req.method} ${c.req.path}`, err);
   return c.json(
     {

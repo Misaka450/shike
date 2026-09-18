@@ -101,7 +101,9 @@ export async function scanFridgeImage(
 ): Promise<FridgeScanResult> {
   const base64Image = imageBuffer.toString('base64');
 
-  const models = ['gemini-3.8-flash-high', 'gemini-2.5-flash'];
+  // 模型名单来自配置（CPA_VISION_MODELS，逗号分隔），无需改代码即可切换候选模型
+  const models =
+    config.CPA_VISION_MODELS.length > 0 ? config.CPA_VISION_MODELS : ['gemini-3.8-flash-high'];
   let rawContent: string | null = null;
   let lastError: Error | null = null;
 

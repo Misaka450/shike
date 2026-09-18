@@ -2,6 +2,7 @@ import { db } from '../db/index.js';
 import {
   AiRecipeBatchSchema,
   CookRecipeRequest,
+  CookingHistoryEntry,
   InventoryItem,
   MatchedIngredientDetail,
   Recipe,
@@ -261,17 +262,23 @@ export function initSeedRecipes(): void {
   });
 
   insertAll([...DEFAULT_RECIPES, ...EXPANDED_RECIPES]);
-}
 
-// Auto seed default and expanded recipes
-initSeedRecipes();
+  // 播种可能新增了菜谱，让缓存下次访问时重建
+  invalidateRecipeCache();
+}
 
 /**
  * 菜谱内存缓存（PER-02）
  * 旧实现每次推荐都要把全部菜谱读出来并逐条 JSON.parse 解析食材与步骤，
  * 随着菜谱数量增长，这个开销会线性放大。这里改为只在首次访问时解析一次。
+ *
+ * ownerById 与菜谱内容一起缓存：旧实现判断「这道 AI 菜谱属于谁」时，
+ * 每道菜谱都要单独查一次数据库（N+1 查询），列表接口里放大得非常明显。
  */
-let recipeCache: Recipe[] | null = null;
+let recipeCache: {
+  recipes: Recipe[];
+  ownerById: Map<string, string | null>;
+} | null = null;
 
 /** 菜谱数据发生变化（例如新增 AI 菜谱）时清空缓存，下次访问自动重建 */
 export function invalidateRecipeCache(): void {
@@ -281,10 +288,16 @@ export function invalidateRecipeCache(): void {
 /** 读取全部菜谱（带缓存），仅在数据变更或首次访问时真正查询数据库 */
 function getAllRecipes(): Recipe[] {
   if (!recipeCache) {
-    const rows = db.prepare('SELECT * FROM recipes ORDER BY name ASC').all();
-    recipeCache = rows.map(rowToRecipe);
+    const rows = db
+      .prepare('SELECT * FROM recipes ORDER BY name ASC')
+      .all() as Array<Record<string, unknown>>;
+    const ownerById = new Map<string, string | null>();
+    for (const row of rows) {
+      ownerById.set(String(row.id), (row.owner_id as string | null) ?? null);
+    }
+    recipeCache = { recipes: rows.map(rowToRecipe), ownerById };
   }
-  return recipeCache;
+  return recipeCache.recipes;
 }
 
 /** 安全解析 JSON 字符串：数据损坏时回退到默认值，避免单个脏数据让整个接口报 500 */
@@ -344,10 +357,29 @@ export function listRecipes(
   });
 }
 
-/** 查询菜谱归属用户；内置菜谱返回 null，不存在返回 undefined */
-const ownerStmt = db.prepare('SELECT owner_id FROM recipes WHERE id = ?');
+/**
+ * 查询菜谱归属用户；内置菜谱返回 null，不存在返回 undefined
+ *
+ * 【修复 PER-05】旧实现每判断一道 AI 菜谱的归属就单独发一条 SELECT，
+ * 在列表接口里是典型的 N+1 查询：菜谱越多，请求越慢。
+ * 现在优先从缓存的 ownerById 直接取，只有缓存里查无此 ID
+ * （例如刚被并发写入、缓存尚未重建）才回退一次数据库查询。
+ */
+// 延迟到首次使用时再 prepare：数据库迁移已改为由入口显式执行，
+// 若在模块加载时就 prepare，会在表尚未创建时直接抛错（测试环境尤为明显）
+let ownerStmt: ReturnType<typeof db.prepare> | null = null;
+function getOwnerStmt(): ReturnType<typeof db.prepare> {
+  if (!ownerStmt) {
+    ownerStmt = db.prepare('SELECT owner_id FROM recipes WHERE id = ?');
+  }
+  return ownerStmt;
+}
+
 function getRecipeOwnerId(id: string): string | null | undefined {
-  const row = ownerStmt.get(id) as { owner_id: string | null } | undefined;
+  if (recipeCache && recipeCache.ownerById.has(id)) {
+    return recipeCache.ownerById.get(id) ?? null;
+  }
+  const row = getOwnerStmt().get(id) as { owner_id: string | null } | undefined;
   return row ? row.owner_id : undefined;
 }
 
@@ -580,7 +612,8 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
         Authorization: `Bearer ${config.CPA_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gemini-3.8-flash-high',
+        // 模型名改为从配置读取（CPA_TEXT_MODEL），切换模型无需改代码重新构建
+        model: config.CPA_TEXT_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -733,12 +766,16 @@ export function cookRecipe(
 ): { success: boolean; historyId: number; consumedCount: number; recipeName: string } {
   const recipe = getRecipeById(recipeId);
   if (!recipe) {
-    throw new Error(`Recipe with id '${recipeId}' not found`);
+    // 【修复 ARC-06】统一抛 RecipeError：
+    // 旧实现抛裸 Error，路由层只能靠 message.includes('not found') 这种字符串匹配来判断状态码，
+    // 一旦措辞变化就会退化成 500。改为结构化错误后路由用 instanceof 即可精确映射 404。
+    throw new RecipeError('菜谱不存在', 404, 'NOT_FOUND');
   }
 
   // 【修复 NEW-01】AI 菜谱是私有内容：只能烹饪自己生成的菜谱，内置菜谱人人可用
   if (recipe.id.startsWith('ai-recipe-') && getRecipeOwnerId(recipeId) !== userId) {
-    throw new Error(`Recipe with id '${recipeId}' not found`);
+    // 与"不存在"返回同样的 404，避免泄露他人菜谱 ID 是否存在
+    throw new RecipeError('菜谱不存在', 404, 'NOT_FOUND');
   }
 
   const activeInv = db
@@ -793,15 +830,47 @@ export function cookRecipe(
   };
 }
 
-export function getCookingHistory(userId: string): any[] {
-  const rows = db.prepare(`
-    SELECT * FROM cooking_history
-    WHERE user_id = ?
-    ORDER BY cooked_at DESC
-  `).all(userId);
+/**
+ * 读取烹饪历史（修复 PER-03）
+ *
+ * 旧实现 SELECT 出该用户的全部历史记录，做菜越多返回体越大，
+ * 且返回类型是 any[]，字段结构完全靠约定。
+ * 现在默认只取最近 50 条，支持 before 游标翻页，并返回明确的结构化类型。
+ */
+export function getCookingHistory(
+  userId: string,
+  options: { limit?: number; before?: string } = {}
+): CookingHistoryEntry[] {
+  // 即便调用方绕过路由直接调用，这里也再钳一次，保证 SQL 的 LIMIT 始终受控
+  const limit = Math.min(Math.max(1, Math.trunc(options.limit ?? 50)), 200);
 
-  return rows.map((r: any) => ({
-    ...r,
+  const rows = (
+    options.before
+      ? db
+          .prepare(
+            `SELECT * FROM cooking_history
+             WHERE user_id = ? AND cooked_at < ?
+             ORDER BY cooked_at DESC
+             LIMIT ?`
+          )
+          .all(userId, options.before, limit)
+      : db
+          .prepare(
+            `SELECT * FROM cooking_history
+             WHERE user_id = ?
+             ORDER BY cooked_at DESC
+             LIMIT ?`
+          )
+          .all(userId, limit)
+  ) as Array<Record<string, unknown>>;
+
+  return rows.map((r) => ({
+    id: Number(r.id),
+    user_id: String(r.user_id),
+    recipe_id: String(r.recipe_id),
+    recipe_name: String(r.recipe_name),
+    cooked_at: String(r.cooked_at),
     ingredients_used: safeJsonParse<string[]>(r.ingredients_used, []),
+    notes: String(r.notes ?? ''),
   }));
 }

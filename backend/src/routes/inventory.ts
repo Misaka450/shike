@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
+import { readJsonBody } from '../middleware/bodyLimit.js';
 import {
   BatchAddInventorySchema,
   CreateInventoryItemInputSchema,
@@ -64,7 +65,7 @@ inventoryRoute.get('/:id', (c) => {
 // POST /batch - Batch add inventory items
 inventoryRoute.post('/batch', async (c) => {
   const userId = c.get('userId');
-  const rawBody = await c.req.json().catch(() => ({}));
+  const rawBody = await readJsonBody(c);
 
   // Handle both { items: [...] } and direct array [...]
   const itemsData = Array.isArray(rawBody) ? { items: rawBody } : rawBody;
@@ -104,7 +105,7 @@ inventoryRoute.post('/batch', async (c) => {
 // POST / - Add single item
 inventoryRoute.post('/', async (c) => {
   const userId = c.get('userId');
-  const rawBody = await c.req.json().catch(() => ({}));
+  const rawBody = await readJsonBody(c);
   const parsed = CreateInventoryItemInputSchema.safeParse(rawBody);
 
   if (!parsed.success) {
@@ -145,7 +146,7 @@ inventoryRoute.patch('/:id', async (c) => {
     return c.json({ success: false, code: 'INVALID_ID', error: '无效的 ID' }, 400);
   }
 
-  const rawBody = await c.req.json().catch(() => ({}));
+  const rawBody = await readJsonBody(c);
   const parsed = UpdateInventoryItemSchema.safeParse(rawBody);
 
   if (!parsed.success) {

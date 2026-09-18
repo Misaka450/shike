@@ -7,6 +7,10 @@ process.env.DB_PATH = ':memory:';
 
 // 动态导入：保证上面的 DB_PATH 在模块初始化之前就已经生效
 const { generateAiRecipes } = await import('../recipeService.js');
+const { runMigrations } = await import('../../db/index.js');
+
+// 迁移不再随 import 自动执行，测试需显式建表
+runMigrations();
 
 const originalFetch = globalThis.fetch;
 
