@@ -16,6 +16,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "食刻 AI - 智能冰箱管理与灵感菜谱",
   description: "拍照自动识别冰箱食材，智能保质期监控，一键下厨扣库与定制菜谱推荐",
+  referrer: "no-referrer",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
@@ -31,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
+        <meta name="referrer" content="no-referrer" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>

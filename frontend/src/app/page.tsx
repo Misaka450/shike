@@ -729,6 +729,7 @@ export default function ShikeApp() {
                       <img
                         src={recipe.image_url || '/images/tomato_egg.webp'}
                         alt={recipe.name}
+                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         // 菜谱封面多为外链大图且位于长列表下方，懒加载可显著减少首屏请求数
                         loading="lazy"
@@ -1180,8 +1181,12 @@ export default function ShikeApp() {
               <img
                 src={selectedRecipe.image_url || '/images/tomato_egg.webp'}
                 alt={selectedRecipe.name}
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
                 loading="lazy"
+                onError={(e: any) => {
+                  e.target.src = '/images/tomato_egg.webp';
+                }}
               />
               <button
                 onClick={() => setSelectedRecipe(null)}
