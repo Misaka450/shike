@@ -11,7 +11,8 @@ import {
   RecommendQuery,
 } from '../schemas/index.js';
 import { markItemsAsConsumed } from './inventoryService.js';
-import { EXPANDED_RECIPES } from './expandedRecipes.js';
+import seedRecipesData from '../data/seedRecipes.json' with { type: 'json' };
+const seedRecipes: Recipe[] = seedRecipesData as Recipe[];
 import { config } from '../config.js';
 import { isIngredientMatch } from '../utils/ingredientMatch.js';
 import { selectRecipeImage } from '../utils/recipeImage.js';
@@ -261,7 +262,7 @@ export function initSeedRecipes(): void {
     }
   });
 
-  insertAll([...DEFAULT_RECIPES, ...EXPANDED_RECIPES]);
+  insertAll(seedRecipes);
 
   // 播种可能新增了菜谱，让缓存下次访问时重建
   invalidateRecipeCache();

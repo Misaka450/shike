@@ -727,14 +727,16 @@ export default function ShikeApp() {
                     {/* Visual & Badges */}
                     <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-slate-100 mb-3.5">
                       <img
-                        src={recipe.image_url || '/images/tomato_egg.webp'}
+                        src={recipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
                         alt={recipe.name}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         // 菜谱封面多为外链大图且位于长列表下方，懒加载可显著减少首屏请求数
                         loading="lazy"
                         onError={(e: any) => {
-                          e.target.src = '/images/tomato_egg.webp';
+                          if (!e.target.src.endsWith('/images/dishes/recipe_tomato_egg.webp')) {
+                            e.target.src = '/images/dishes/recipe_tomato_egg.webp';
+                          }
                         }}
                       />
                       {/* Match Rate Pill */}
@@ -1179,13 +1181,15 @@ export default function ShikeApp() {
             {/* Modal Header */}
             <div className="relative aspect-[16/9] sm:aspect-[21/9] bg-slate-100">
               <img
-                src={selectedRecipe.image_url || '/images/tomato_egg.webp'}
+                src={selectedRecipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
                 alt={selectedRecipe.name}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
                 loading="lazy"
                 onError={(e: any) => {
-                  e.target.src = '/images/tomato_egg.webp';
+                  if (!e.target.src.endsWith('/images/dishes/recipe_tomato_egg.webp')) {
+                    e.target.src = '/images/dishes/recipe_tomato_egg.webp';
+                  }
                 }}
               />
               <button

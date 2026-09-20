@@ -16,58 +16,11 @@ import re
 from pathlib import Path
 
 DB_PATH = Path('/opt/shike-ai/data/db/shike.db')
+VERIFIED_JSON = Path(__file__).resolve().parent.parent / 'backend' / 'src' / 'data' / 'localVerifiedRecipes.json'
 
-# 食刻官方已核验本地高质量 WebP 菜谱封面白名单字典
-# 支持按 recipe_id 或精确菜品名称精确命中，第一优先级返回对应本地 WebP
-LOCAL_VERIFIED_RECIPES = {
-    # 1. 按 recipeId 精确映射
-    'recipe-tomato-egg': '/images/dishes/recipe_tomato_egg.webp',
-    'recipe-htc-8402a0fbca': '/images/dishes/recipe_htc_8402a0fbca.webp',
-    'recipe-htc-0cc027f236': '/images/dishes/recipe_htc_0cc027f236.webp',
-    'recipe-htc-083a15958b': '/images/dishes/recipe_htc_083a15958b.webp',
-    'recipe-htc-4b2beca30f': '/images/dishes/recipe_htc_4b2beca30f.webp',
-    'recipe-htc-b80cf09bf6': '/images/dishes/recipe_htc_b80cf09bf6.webp',
-    'recipe-htc-5d3159e46a': '/images/dishes/recipe_htc_5d3159e46a.webp',
-    'recipe-pork-eggplant': '/images/dishes/recipe_pork_eggplant.webp',
-    'recipe-mapo-tofu': '/images/dishes/recipe_mapo_tofu.webp',
-    'recipe-steamed-shrimp': '/images/dishes/recipe_steamed_shrimp.webp',
-    'recipe-cola-wings': '/images/dishes/recipe_cola_wings.webp',
-    'recipe-di-san-xian': '/images/dishes/recipe_di_san_xian.webp',
-    'recipe-yuxiang-pork': '/images/dishes/recipe_yuxiang_pork.webp',
-    'recipe-pepper-pork': '/images/dishes/recipe_pepper_pork.webp',
-    'recipe-garlic-broccoli': '/images/dishes/recipe_garlic_broccoli.webp',
-    'recipe-potato-shreds': '/images/dishes/recipe_potato_shreds.webp',
-    'recipe-sweet-sour-ribs': '/images/dishes/recipe_sweet_sour_ribs.webp',
-    'recipe-pan-seared-salmon': '/images/dishes/recipe_pan_seared_salmon.webp',
-    'recipe-garlic-steamed-shrimp': '/images/dishes/recipe_garlic_steamed_shrimp.webp',
-    'recipe-cabbage-stir-fry': '/images/dishes/recipe_cabbage_stir_fry.webp',
-
-    # 2. 按菜品精确名称映射
-    '西红柿炒鸡蛋': '/images/dishes/recipe_tomato_egg.webp',
-    '番茄炒蛋': '/images/dishes/recipe_tomato_egg.webp',
-    '西红柿炒蛋': '/images/dishes/recipe_tomato_egg.webp',
-    '番茄炒鸡蛋': '/images/dishes/recipe_tomato_egg.webp',
-    '蚂蚁上树': '/images/dishes/recipe_htc_8402a0fbca.webp',
-    '黄瓜炒肉': '/images/dishes/recipe_htc_0cc027f236.webp',
-    '茄子炖土豆': '/images/dishes/recipe_htc_083a15958b.webp',
-    '红烧鲤鱼': '/images/dishes/recipe_htc_4b2beca30f.webp',
-    '蒜苔炒肉末': '/images/dishes/recipe_htc_b80cf09bf6.webp',
-    '桂林十八酿': '/images/dishes/recipe_htc_5d3159e46a.webp',
-    '肉末风味茄子': '/images/dishes/recipe_pork_eggplant.webp',
-    '麻婆豆腐': '/images/dishes/recipe_mapo_tofu.webp',
-    '白灼基围虾': '/images/dishes/recipe_steamed_shrimp.webp',
-    '可乐鸡翅': '/images/dishes/recipe_cola_wings.webp',
-    '地三鲜': '/images/dishes/recipe_di_san_xian.webp',
-    '鱼香肉丝': '/images/dishes/recipe_yuxiang_pork.webp',
-    '青椒小炒肉': '/images/dishes/recipe_pepper_pork.webp',
-    '蒜蓉西兰花': '/images/dishes/recipe_garlic_broccoli.webp',
-    '酸辣土豆丝': '/images/dishes/recipe_potato_shreds.webp',
-    '糖醋排骨': '/images/dishes/recipe_sweet_sour_ribs.webp',
-    '香煎黑椒三文鱼': '/images/dishes/recipe_pan_seared_salmon.webp',
-    '蒜蓉粉丝蒸大虾': '/images/dishes/recipe_garlic_steamed_shrimp.webp',
-    '手撕包菜': '/images/dishes/recipe_cabbage_stir_fry.webp',
-    '手撕手剥包菜': '/images/dishes/recipe_cabbage_stir_fry.webp',
-}
+# 食刻官方已核验本地高质量 WebP 菜谱封面白名单字典（单一数据源）
+with open(VERIFIED_JSON, 'r', encoding='utf-8') as f:
+    LOCAL_VERIFIED_RECIPES = json.load(f)
 
 # 真实可访问的中式高清美食图片映射表（Unsplash Imgix CDN & 本地高质量 WebP）
 # 全部 URL 均已通过 HTTP 200 验证

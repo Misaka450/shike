@@ -32,7 +32,6 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
-        <meta name="referrer" content="no-referrer" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>

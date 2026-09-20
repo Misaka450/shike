@@ -10,7 +10,7 @@ out/
 build/
 
 # Local database and persistent storage
-data/
+/data/
 *.db
 *.db-wal
 *.db-shm

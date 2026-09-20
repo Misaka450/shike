@@ -11,13 +11,13 @@ sync_local_verified.py
 
 import os
 import re
+import json
 import sqlite3
 from pathlib import Path
 
 DISHES_DIR = Path('/opt/shike-ai/frontend/public/images/dishes')
 DB_PATH = Path('/opt/shike-ai/data/db/shike.db')
-RECIPE_IMAGE_TS = Path('/opt/shike-ai/backend/src/utils/recipeImage.ts')
-FIX_SCRIPT = Path('/opt/shike-ai/scripts/fix_recipe_images.py')
+VERIFIED_JSON = Path('/opt/shike-ai/backend/src/data/localVerifiedRecipes.json')
 
 def main():
     conn = sqlite3.connect(DB_PATH)
@@ -71,6 +71,17 @@ def main():
             
     conn.commit()
     
+    # 同步单一数据源 localVerifiedRecipes.json
+    if VERIFIED_JSON.exists():
+        with open(VERIFIED_JSON, 'r', encoding='utf-8') as f:
+            current_json = json.load(f)
+    else:
+        current_json = {}
+    current_json.update(verified_map)
+    with open(VERIFIED_JSON, 'w', encoding='utf-8') as f:
+        json.dump(current_json, f, ensure_ascii=False, indent=2)
+    print(f"✅ 白名单单一数据源已同步更新: {len(current_json)} 条")
+
     cur.execute("SELECT COUNT(*) FROM recipes WHERE image_url LIKE '/images/dishes/%'")
     cnt = cur.fetchone()[0]
     print(f"✅ 数据库已强锁定本地高质量大片菜品数: {cnt} 道")
