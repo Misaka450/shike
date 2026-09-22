@@ -1117,9 +1117,7 @@ export default function ShikeApp() {
             食刻 AI 的菜谱灵感、量化下厨步骤与经典家常风味建立在开源社区的贡献之上
           </p>
 
-          {/* 双列自适应轻量卡片 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-3xl mx-auto text-left">
-            {/* 卡片 1: HowToCook 程序员做饭指南 */}
+          <div className="max-w-md mx-auto text-left">
             <a
               href="https://github.com/Anduin2017/HowToCook"
               target="_blank"
@@ -1143,32 +1141,6 @@ export default function ShikeApp() {
                 </div>
               </div>
               <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
-            </a>
-
-            {/* 卡片 2: 下厨房开源语料库 */}
-            <a
-              href="https://counterfactual-recipe-generation.github.io/dataset_en.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-4 rounded-2xl bg-white/90 hover:bg-white border border-slate-200/80 hover:border-amber-300 shadow-sm hover:shadow-md hover:shadow-amber-500/5 transition-all duration-200 flex items-center justify-between gap-3 backdrop-blur-sm"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 group-hover:scale-105 group-hover:bg-amber-100/80 transition-all duration-200">
-                  <Utensils className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-                    <h4 className="text-xs font-semibold text-slate-800 group-hover:text-amber-700 transition-colors truncate">
-                      下厨房开源语料库
-                    </h4>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 truncate pl-3">
-                    经典中式家常风味数据
-                  </p>
-                </div>
-              </div>
-              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
             </a>
           </div>
         </footer>
