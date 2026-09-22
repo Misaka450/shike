@@ -52,7 +52,7 @@ MIN_IMAGE_HEIGHT = 250             # 最小高度
 MIN_ASPECT_RATIO = 0.35            # 宽高比下限，避免极端窄条图
 MAX_ASPECT_RATIO = 2.85            # 宽高比上限，避免极端横幅图
 PASS_SCORE_THRESHOLD = 7           # 多模态打分通过阈值 (1-10)
-MAX_CANDIDATES_PER_DISH = 6        # 每个菜品最多盲审候选图数
+MAX_CANDIDATES_PER_DISH = 10       # 每个菜品最多盲审候选图数
 
 # ===========================
 # 日志系统配置
@@ -219,6 +219,9 @@ class ImageSearcher:
         # 排除下厨房及其图床域名
         if any(d in lower for d in ['chuimg.com', 'xiachufang.com']):
             return True
+        # 排除商业带编号硬水印素材图库
+        if any(d in lower for d in ['nipic.com', '58pic.com', '699pic.com', 'ztupic.com', 'huitu.com']):
+            return True
         # 排除常见非菜品图床
         if any(d in lower for d in ['avatar', 'favicon', 'logo', 'icon', 'meme', 'banner', 'button']):
             return True
@@ -226,25 +229,29 @@ class ImageSearcher:
 
     @classmethod
     def search_candidates(cls, dish_name: str, limit: int = MAX_CANDIDATES_PER_DISH) -> List[str]:
-        """多源聚合检索，返回去重后的候选高清图片列表"""
+        """多源聚合检索（含小红书图源、360中餐高清库与必应图源）"""
         candidates = []
         seen = set()
 
-        # 1. 主源：Bing Image
-        bing_urls = cls.search_bing(dish_name, max_results=limit * 2)
-        for u in bing_urls:
-            if u not in seen:
-                seen.add(u)
-                candidates.append(u)
+        def add_urls(urls):
+            for u in urls:
+                if u not in seen:
+                    seen.add(u)
+                    candidates.append(u)
 
-        # 2. 互补源：360 高清中餐图片检索（纯品名检索，补全摄影图库）
-        so_urls = cls.search_360(dish_name, max_results=limit * 2)
-        for u in so_urls:
-            if u not in seen:
-                seen.add(u)
-                candidates.append(u)
+        # 1. 小红书精选美食摄影图源
+        add_urls(cls.search_360(f"{dish_name} 小红书", max_results=limit))
+        add_urls(cls.search_bing(f"{dish_name} 小红书", max_results=limit))
 
-        return candidates[:limit * 2]
+        # 2. 360 高清中餐图源 (纯菜品名与美食摄影)
+        add_urls(cls.search_360(dish_name, max_results=limit))
+        add_urls(cls.search_360(f"{dish_name} 美食摄影", max_results=limit))
+
+        # 3. Bing 优质中餐图源 (纯菜名与菜谱精选)
+        add_urls(cls.search_bing(dish_name, max_results=limit))
+        add_urls(cls.search_bing(f"{dish_name} 菜谱", max_results=limit))
+
+        return candidates[:limit * 3]
 
 
 # ===========================
