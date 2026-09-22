@@ -75,7 +75,9 @@ export async function callCpaVision(
     },
     body: JSON.stringify(payload),
     // 【修复 PER-04】给上游调用加超时，避免模型服务挂起时请求永久阻塞
-    signal: AbortSignal.timeout(config.CPA_TIMEOUT_MS),
+    // 【修复 PERF-03】识图走独立的更短超时：候选模型是串行尝试的，
+    // 若每个都用通用的 30 秒，两个模型最坏要等 60 秒才告诉用户失败。
+    signal: AbortSignal.timeout(config.CPA_VISION_TIMEOUT_MS),
   });
 
   if (!response.ok) {

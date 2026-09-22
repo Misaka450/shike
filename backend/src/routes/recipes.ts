@@ -3,12 +3,13 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
 import { readJsonBody } from '../middleware/bodyLimit.js';
-import { checkRateLimit, getClientIp } from '../services/authSecurity.js';
+import { checkRateLimit, getClientIp, isIdentifiableClientIp } from '../services/authSecurity.js';
 import {
   AiGenerateRequestSchema,
   CookRecipeRequestSchema,
   HistoryQuerySchema,
   RecommendQuerySchema,
+  RecipeListQuerySchema,
 } from '../schemas/index.js';
 import { listActiveInventory } from '../services/inventoryService.js';
 import {
@@ -28,16 +29,50 @@ export const recipesRoute = new Hono<AppEnv>();
 // 【安全修复 SEC-01】路由组统一鉴权，身份只从服务端会话读取
 recipesRoute.use('*', requireAuth);
 
-// GET / - List all recipes（内置菜谱 + 当前用户自己的 AI 菜谱）
+/**
+ * GET / - 分页列出菜谱（内置菜谱 + 当前用户自己的 AI 菜谱）
+ *
+ * 【修复 PERF-01】旧实现一次性返回全量菜谱。菜谱库扩到 293 道后，
+ * 单次响应约 498 KB（每道都带完整的 ingredients 与 instructions），
+ * 而调用方往往只需要其中一页。现在改为 limit / offset 分页：
+ * - limit 默认 50、上限 200；offset 默认 0；
+ * - total 返回「过滤后的总数」而非本页条数，客户端据此判断是否还有下一页。
+ */
 recipesRoute.get('/', (c) => {
   const userId = c.get('userId');
+
+  const parsed = RecipeListQuerySchema.safeParse({
+    limit: c.req.query('limit'),
+    offset: c.req.query('offset'),
+  });
+  if (!parsed.success) {
+    return c.json(
+      {
+        success: false,
+        code: 'VALIDATION_FAILED',
+        error: '查询参数无效',
+        details: parsed.error.issues,
+      },
+      400
+    );
+  }
+
   const cuisine = c.req.query('cuisine');
   const difficulty = c.req.query('difficulty');
-  const recipes = listRecipes({ cuisine, difficulty }, userId);
+  const { limit, offset } = parsed.data;
+
+  const matched = listRecipes({ cuisine, difficulty }, userId);
+  const total = matched.length;
+  const page = matched.slice(offset, offset + limit);
+
   return c.json({
     success: true,
-    data: recipes,
-    total: recipes.length,
+    data: page,
+    total,
+    limit,
+    offset,
+    // 客户端据此判断是否还能继续翻页，省掉一次试探性请求
+    has_more: offset + page.length < total,
   });
 });
 
@@ -204,8 +239,14 @@ recipesRoute.post('/ai-generate', async (c) => {
   // - IP 维度（10 次/分钟）：防止批量创建访客会话绕过用户维度限制
   // 位置放在各项本地校验之后，保证只有真正要调用模型时才计数
   const userRate = checkRateLimit(`ai-recipe:user:${userId}`, 3, 60 * 1000);
-  const ipRate = checkRateLimit(`ai-recipe:ip:${getClientIp(c)}`, 10, 60 * 1000);
-  const blocked = !userRate.allowed ? userRate : !ipRate.allowed ? ipRate : null;
+  const clientIp = getClientIp(c);
+  // 【修复 SEC-01（本轮）】IP 无法识别时跳过 IP 维度：
+  // 共享桶会把互不相关的用户挤在一起，导致少数人的正常请求把所有人一起限掉。
+  // 用户维度限流仍然生效，防刷能力没有因此削弱。
+  const ipRate = isIdentifiableClientIp(clientIp)
+    ? checkRateLimit(`ai-recipe:ip:${clientIp}`, 10, 60 * 1000)
+    : null;
+  const blocked = !userRate.allowed ? userRate : ipRate && !ipRate.allowed ? ipRate : null;
 
   if (blocked) {
     return c.json(

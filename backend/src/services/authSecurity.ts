@@ -189,7 +189,8 @@ rateLimitCleanupInterval.unref();
 
 export function checkLockout(ip: string, username?: string): { locked: boolean; remainingSeconds: number; remainingMinutes: number } {
   const now = Date.now();
-  const ipRec = ipLockouts.get(ip);
+  // IP 无法识别时不查 IP 维度：那条记录是所有同类请求共享的，照它锁定会误伤无关用户
+  const ipRec = isIdentifiableClientIp(ip) ? ipLockouts.get(ip) : undefined;
   const userRec = username ? userLockouts.get(username) : undefined;
 
   let maxLockedUntil = 0;
@@ -229,7 +230,12 @@ export function recordFailedLogin(ip: string, username?: string): { locked: bool
     return { locked: false, lockedUntil: 0 };
   }
 
-  const ipResult = record(ipLockouts, ip);
+  // IP 无法识别时只按账号维度计数：共享桶一旦计入 IP 维度，
+  // 5 次失败就会锁死"所有取不到 IP 的请求"，等同于全站拒绝登录。
+  // 账号维度仍然生效，暴力破解的防护没有因此失效。
+  const ipResult = isIdentifiableClientIp(ip)
+    ? record(ipLockouts, ip)
+    : { locked: false, lockedUntil: 0 };
   const userResult = username ? record(userLockouts, username) : { locked: false, lockedUntil: 0 };
 
   if (ipResult.locked || userResult.locked) {
@@ -243,11 +249,29 @@ export function recordFailedLogin(ip: string, username?: string): { locked: bool
 }
 
 export function resetLoginFailures(ip: string, username?: string): void {
-  ipLockouts.delete(ip);
+  if (isIdentifiableClientIp(ip)) {
+    ipLockouts.delete(ip);
+  }
   if (username) {
     userLockouts.delete(username);
   }
 }
+
+/**
+ * 无法识别客户端来源地址时的占位值
+ *
+ * 【安全修复 SEC-01（本轮）】这个占位值会被所有"取不到来源地址"的请求共用，
+ * 若把它当作真实 IP 参与锁定与限流，少数几次失败就会把这一整类请求锁死——
+ * 表现为全站无法登录。因此它必须能被下游显式识别并区别对待。
+ */
+export const UNKNOWN_CLIENT_IP = 'unknown';
+
+/** 该 IP 是否为可识别的真实来源地址（false 表示应跳过 IP 维度的锁定/限流） */
+export function isIdentifiableClientIp(ip: string): boolean {
+  return Boolean(ip) && ip !== UNKNOWN_CLIENT_IP;
+}
+
+let unknownIpWarned = false;
 
 /**
  * 获取客户端真实 IP
@@ -273,7 +297,21 @@ export function getClientIp(c: Context): string {
   // 直连场景：取 Node 底层 socket 的对端地址，这是无法被请求头伪造的
   const socketIp = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)
     ?.incoming?.socket?.remoteAddress;
-  return socketIp || 'unknown';
+
+  if (!socketIp) {
+    // 取不到通常是部署形态变化导致的（换了 runtime、socket 被代理层剥离等），
+    // 只提示一次避免刷屏，但必须让运维看见——否则排查"全站登录异常"时毫无头绪
+    if (!unknownIpWarned) {
+      unknownIpWarned = true;
+      console.warn(
+        `[SEC] 无法获取客户端来源地址，相关请求将以 "${UNKNOWN_CLIENT_IP}" 参与限流与登录锁定。` +
+          '请检查部署形态（是否缺少 socket 信息、是否需要开启 TRUST_PROXY）。'
+      );
+    }
+    return UNKNOWN_CLIENT_IP;
+  }
+
+  return socketIp;
 }
 
 // --- Password Hashing & Timing-safe Verification ---

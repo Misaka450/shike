@@ -68,6 +68,14 @@ export const config = {
   /** 调用 CPA 上游服务的超时时间（毫秒），防止上游挂起导致请求永久等待 */
   CPA_TIMEOUT_MS: envInt(process.env.CPA_TIMEOUT_MS, 30_000),
 
+  /**
+   * 视觉识别的单次模型超时（毫秒），默认 15 秒
+   * 【性能修复 PERF-03】识图会按 CPA_VISION_MODELS 顺序串行尝试多个模型，
+   * 若每个都等满 CPA_TIMEOUT_MS（默认 30 秒），两模型最坏要让用户等 60 秒。
+   * 这里给识图单独一个更短的超时：模型迟迟不返回时尽快放弃并转下一个候选。
+   */
+  CPA_VISION_TIMEOUT_MS: envInt(process.env.CPA_VISION_TIMEOUT_MS, 15_000),
+
   /** 是否为生产环境（生产环境会隐藏内部错误细节） */
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
 };

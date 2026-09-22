@@ -708,13 +708,17 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
       // 【修复 NEW-02】数量上限改为「按用户」维度：
       // 旧实现是全局 50 条，多人使用时后生成的用户会把别人还在看的菜谱挤掉。
       // 现在每个用户各自保留最近 N 条，互不影响。
+      // 【修复 ARCH-03】同一次生成的菜谱共用同一个 created_at（时间戳在循环外取一次），
+      // 只按 created_at 排序时，同一批内部的先后是无法确定的，
+      // 清理哪几条取决于 SQLite 的任意返回顺序。追加 id DESC 后顺序才唯一确定：
+      // id 形如 ai-recipe-<毫秒时间戳>-<序号>，既能区分批次也能区分批内次序。
       db.prepare(`
         DELETE FROM recipes
         WHERE id LIKE 'ai-recipe-%' AND owner_id = ?
           AND id NOT IN (
             SELECT id FROM recipes
             WHERE id LIKE 'ai-recipe-%' AND owner_id = ?
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id DESC
             LIMIT ?
           )
       `).run(userId, userId, MAX_AI_RECIPES);

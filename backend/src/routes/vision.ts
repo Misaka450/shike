@@ -3,7 +3,7 @@ import type { AppEnv } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
 import { bodyLimitResponse, isBodyLimitError, readJsonBody } from '../middleware/bodyLimit.js';
 import { config } from '../config.js';
-import { checkRateLimit, getClientIp } from '../services/authSecurity.js';
+import { checkRateLimit, getClientIp, isIdentifiableClientIp } from '../services/authSecurity.js';
 import { batchAddInventory } from '../services/inventoryService.js';
 import { scanFridgeImage } from '../services/visionService.js';
 
@@ -65,8 +65,12 @@ visionRoute.post('/fridge-scan', async (c) => {
   // 限流：识图会真实调用多模态大模型，必须防止被脚本批量刷取（SEC-07）
   // 采用用户 + IP 双重维度：用户维度保证正常使用体验，IP 维度防止批量注册访客绕过
   const userRate = checkRateLimit(`vision:user:${userId}`, 10, 60 * 1000);
-  const ipRate = checkRateLimit(`vision:ip:${getClientIp(c)}`, 30, 60 * 1000);
-  const blocked = !userRate.allowed ? userRate : !ipRate.allowed ? ipRate : null;
+  const clientIp = getClientIp(c);
+  // 【修复 SEC-01（本轮）】IP 无法识别时跳过 IP 维度，理由同 /recipes/ai-generate
+  const ipRate = isIdentifiableClientIp(clientIp)
+    ? checkRateLimit(`vision:ip:${clientIp}`, 30, 60 * 1000)
+    : null;
+  const blocked = !userRate.allowed ? userRate : ipRate && !ipRate.allowed ? ipRate : null;
 
   if (blocked) {
     return c.json(

@@ -159,6 +159,19 @@ export const RecommendQuerySchema = z.object({
 
 export type RecommendQuery = z.infer<typeof RecommendQuerySchema>;
 
+/**
+ * 菜谱列表查询参数（修复 PERF-01）
+ * 菜谱库从 58 道扩到 293 道后，列表接口一次性返回全量约 498 KB，
+ * 且每次都要把 293 份 ingredients / instructions 全部序列化。
+ * 这里补上分页：默认取 50 条、单页上限 200 条，并允许用 offset 翻页。
+ */
+export const RecipeListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export type RecipeListQuery = z.output<typeof RecipeListQuerySchema>;
+
 export const CookRecipeRequestSchema = z.object({
   notes: z.string().optional(),
   auto_consume_ingredients: z.boolean().default(true),
