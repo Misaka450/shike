@@ -115,6 +115,14 @@ def get_cpa_api_key(cli_key: Optional[str] = None) -> str:
     return ''
 
 
+def clean_dish_name_for_search(name: str) -> str:
+    """清洗菜品名称中的修饰词与前缀符号，提高图源检索召回率与准确度"""
+    clean = re.sub(r'^[✨⭐\s]*AI[定制]*\s*[·•-]?\s*', '', name)
+    clean = re.sub(r'[【】「」『』\[\]()（）]', ' ', clean)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    return clean or name
+
+
 def is_verified_local(image_url: Optional[str]) -> bool:
     """判定是否为食刻已核验的本地高质量 WebP 图片白名单"""
     if not image_url:
@@ -124,13 +132,15 @@ def is_verified_local(image_url: Optional[str]) -> bool:
 
 
 def is_placeholder_image(image_url: Optional[str]) -> bool:
-    """判定是否为外部占位图（如 Unsplash 占位图、空图或损坏格式）"""
+    """判定是否为外部占位图（如 Unsplash 占位图、空图、下厨房图或损坏格式）"""
     if not image_url:
         return True
     clean_url = image_url.strip().lower()
     if is_verified_local(clean_url):
         return False
     if 'unsplash.com' in clean_url:
+        return True
+    if 'chuimg.com' in clean_url or 'xiachufang.com' in clean_url:
         return True
     if clean_url.startswith('data:image'):
         return True
@@ -176,25 +186,28 @@ class ImageSearcher:
         return urls
 
     @classmethod
-    def search_xiachufang(cls, dish_name: str, max_results: int = 10) -> List[str]:
-        """通过下厨房图库作为备选高质量中餐图源"""
-        query = urllib.parse.quote(dish_name)
-        url = f"https://www.xiachufang.com/search/?keyword={query}&cat=1001"
-        req = urllib.request.Request(url, headers=cls.HEADERS)
+    def search_360(cls, dish_name: str, max_results: int = 15) -> List[str]:
+        """通过 360 图片搜索检索 `f'{dish_name} 菜谱'` 并解析真实高清图片 URL"""
+        query = urllib.parse.quote(f"{dish_name} 菜谱")
+        url = f"https://image.so.com/j?q={query}&sn=0&pn={max_results * 2}"
+        headers = {
+            'User-Agent': cls.HEADERS['User-Agent'],
+            'Referer': 'https://image.so.com/'
+        }
+        req = urllib.request.Request(url, headers=headers)
         urls = []
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 text = resp.read().decode('utf-8', errors='ignore')
-            raw_chuimgs = re.findall(r'(https://i\d+\.chuimg\.com/[a-zA-Z0-9_]+_\d+w_\d+h\.jpg)', text)
-            for u in raw_chuimgs:
-                # 拼接高清规格请求参数，保持无水印高质
-                high_res_url = f"{u}?imageView2/2/w/800/interlace/1/q/85"
-                if high_res_url not in urls:
-                    urls.append(high_res_url)
+            data = json.loads(text)
+            for item in data.get('list', []):
+                img_url = item.get('img')
+                if img_url and img_url.startswith('http') and not cls._is_blacklisted_url(img_url):
+                    urls.append(img_url)
                 if len(urls) >= max_results:
                     break
         except Exception as e:
-            logger.debug(f"下厨房图片搜索失败 [{dish_name}]: {e}")
+            logger.debug(f"360 图片搜索失败 [{dish_name}]: {e}")
         return urls
 
     @classmethod
@@ -202,6 +215,9 @@ class ImageSearcher:
         """过滤无效格式、动态图、矢量图及黑名单网站"""
         lower = url.lower()
         if any(lower.endswith(ext) for ext in ['.svg', '.gif', '.ico', '.bmp']):
+            return True
+        # 排除下厨房及其图床域名
+        if any(d in lower for d in ['chuimg.com', 'xiachufang.com']):
             return True
         # 排除常见非菜品图床
         if any(d in lower for d in ['avatar', 'favicon', 'logo', 'icon', 'meme', 'banner', 'button']):
@@ -221,13 +237,12 @@ class ImageSearcher:
                 seen.add(u)
                 candidates.append(u)
 
-        # 2. 备用源：下厨房
-        if len(candidates) < limit:
-            xcf_urls = cls.search_xiachufang(dish_name, max_results=limit)
-            for u in xcf_urls:
-                if u not in seen:
-                    seen.add(u)
-                    candidates.append(u)
+        # 2. 互补源：360 高清中餐图片检索（纯品名检索，补全摄影图库）
+        so_urls = cls.search_360(dish_name, max_results=limit * 2)
+        for u in so_urls:
+            if u not in seen:
+                seen.add(u)
+                candidates.append(u)
 
         return candidates[:limit * 2]
 
@@ -584,7 +599,10 @@ class RecipeImageGovernor:
         logger.info(f"{prefix} 当前图为外部占位图/待审核图，启动高质量图源搜寻...")
 
         # 2. 互联网搜寻候选图
-        candidates = ImageSearcher.search_candidates(name, limit=MAX_CANDIDATES_PER_DISH)
+        search_term = clean_dish_name_for_search(name)
+        candidates = ImageSearcher.search_candidates(search_term, limit=MAX_CANDIDATES_PER_DISH)
+        if len(candidates) < 3 and search_term != name:
+            candidates.extend([c for c in ImageSearcher.search_candidates(name, limit=MAX_CANDIDATES_PER_DISH) if c not in candidates])
         if not candidates:
             msg = "未搜寻到可用候选图源"
             logger.warning(f"{prefix} ❌ {msg}")
