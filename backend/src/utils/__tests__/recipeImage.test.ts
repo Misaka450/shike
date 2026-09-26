@@ -18,7 +18,7 @@ describe('selectRecipeImage（食谱封面图精准智能对应）', () => {
     assert.equal(selectRecipeImage('青椒小炒肉'), '/images/dishes/recipe_pepper_pork.webp');
     assert.equal(selectRecipeImage('白灼基围虾'), '/images/dishes/recipe_steamed_shrimp.webp');
     assert.equal(selectRecipeImage('蚂蚁上树'), '/images/dishes/recipe_htc_8402a0fbca.webp');
-    assert.equal(selectRecipeImage('茄子炖土豆'), '/images/dishes/recipe_htc_083a15958b.webp');
+    assert.equal(selectRecipeImage('茄子炖土豆'), '/images/dishes/recipe_htc_083a15958b_v2.webp');
     assert.equal(selectRecipeImage('红烧鲤鱼'), '/images/dishes/recipe_htc_4b2beca30f.webp');
     assert.equal(selectRecipeImage('蒜苔炒肉末'), '/images/dishes/recipe_htc_b80cf09bf6.webp');
     assert.equal(selectRecipeImage('黄瓜炒肉'), '/images/dishes/recipe_htc_0cc027f236.webp');
@@ -26,7 +26,7 @@ describe('selectRecipeImage（食谱封面图精准智能对应）', () => {
 
   it('支持传入 recipeId 强锁定本地核验大片', () => {
     assert.equal(selectRecipeImage('创新地三鲜', '家常菜', [], 'recipe-di-san-xian'), '/images/dishes/recipe_di_san_xian.webp');
-    assert.equal(selectRecipeImage('东北大乱炖', '家常菜', [], 'recipe-htc-083a15958b'), '/images/dishes/recipe_htc_083a15958b.webp');
+    assert.equal(selectRecipeImage('东北大乱炖', '家常菜', [], 'recipe-htc-083a15958b'), '/images/dishes/recipe_htc_083a15958b_v2.webp');
   });
 
   it('非白名单茄子类匹配通用茄子图', () => {

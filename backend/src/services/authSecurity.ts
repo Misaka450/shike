@@ -271,22 +271,46 @@ export function isIdentifiableClientIp(ip: string): boolean {
   return Boolean(ip) && ip !== UNKNOWN_CLIENT_IP;
 }
 
+/** 校验是否属于内网/环回/容器私有 IP 地址 */
+export function isPrivateIp(rawIp: string): boolean {
+  const ip = rawIp.startsWith('::ffff:') ? rawIp.slice(7) : rawIp;
+  if (ip === '::1' || ip === 'localhost') return true;
+  if (/^127\./.test(ip) || /^10\./.test(ip) || /^192\.168\./.test(ip) || /^169\.254\./.test(ip) || ip === '0.0.0.0') {
+    return true;
+  }
+  const m172 = ip.match(/^172\.(\d+)\./);
+  if (m172) {
+    const octet = Number.parseInt(m172[1], 10);
+    if (octet >= 16 && octet <= 31) return true;
+  }
+  if (/^f[cd][0-9a-f]{2}:/i.test(ip) || /^fe[89ab][0-9a-f]:/i.test(ip)) {
+    return true;
+  }
+  return false;
+}
+
 let unknownIpWarned = false;
 
 /**
  * 获取客户端真实 IP
  *
- * 【安全修复 SEC-06】旧实现无条件信任 X-Forwarded-For 请求头，
- * 攻击者只要每次请求携带不同的伪造 IP，就能绕开"5 次失败即锁定"的防护，无限次暴力破解密码。
- * 现在改为：只有在明确配置了可信反向代理（TRUST_PROXY=true）时才采信该头，
- * 否则一律使用 TCP 连接的真实来源地址，客户端无法伪造。
+ * 【安全修复 SEC-01】当配置了可信反向代理（TRUST_PROXY=true）时，
+ * 正确解析 X-Forwarded-For（取最左侧首个非内网代理的客户端真实 IP）。
+ * 若所有代理均为内网地址，则退避使用最左侧首个 IP，彻底杜绝把前端容器代理 IP 当作客户端导致全站误锁 DoS。
+ * 未开启 TRUST_PROXY 时一律使用 TCP 连接的真实来源地址，客户端无法伪造。
  */
 export function getClientIp(c: Context): string {
   if (config.TRUST_PROXY) {
     const forwarded = c.req.header('x-forwarded-for');
     if (forwarded) {
-      const first = forwarded.split(',')[0].trim();
-      if (first) return first;
+      const ips = forwarded
+        .split(',')
+        .map((ip) => ip.trim())
+        .filter(Boolean);
+      if (ips.length > 0) {
+        const publicIp = ips.find((ip) => !isPrivateIp(ip));
+        return publicIp || ips[0];
+      }
     }
     const realIp = c.req.header('x-real-ip');
     if (realIp && realIp.trim()) {

@@ -49,4 +49,31 @@ describe('isIngredientMatch（食材名匹配）', () => {
     // 非标准叫法走模糊兜底路径，保证没有回归
     assert.equal(isIngredientMatch('有机土豆', '马铃薯'), true);
   });
+
+  it('同义词词典内严格以分组为准，洋葱与葱不匹配（修复 LOG-01）', () => {
+    assert.equal(isIngredientMatch('洋葱', '葱'), false);
+    assert.equal(isIngredientMatch('葱', '洋葱'), false);
+    assert.equal(isIngredientMatch('洋葱', '大葱'), false);
+    assert.equal(isIngredientMatch('香葱', '洋葱'), false);
+    assert.equal(isIngredientMatch('紫洋葱', '洋葱'), true);
+    assert.equal(isIngredientMatch('大葱', '小葱'), true);
+  });
+
+  it('牛肉末与通用肉末不应互相匹配（修复 LOG-01）', () => {
+    assert.equal(isIngredientMatch('牛肉末', '肉末'), false);
+    assert.equal(isIngredientMatch('肉末', '牛肉末'), false);
+    assert.equal(isIngredientMatch('猪肉末', '肉末'), true);
+    assert.equal(isIngredientMatch('肉末', '猪肉末'), true);
+  });
+
+  it('带修饰词时互斥保护仍然生效（有机洋葱与葱、有机牛肉末与肉末）', () => {
+    assert.equal(isIngredientMatch('有机洋葱', '葱'), false);
+    assert.equal(isIngredientMatch('葱', '有机洋葱'), false);
+    assert.equal(isIngredientMatch('有机洋葱', '小葱'), false);
+    assert.equal(isIngredientMatch('新鲜洋葱', '香葱'), false);
+    assert.equal(isIngredientMatch('有机牛肉末', '肉末'), false);
+    assert.equal(isIngredientMatch('肉末', '有机牛肉末'), false);
+    assert.equal(isIngredientMatch('有机牛肉末', '猪肉末'), false);
+    assert.equal(isIngredientMatch('有机洋葱', '洋葱'), true);
+  });
 });

@@ -1488,9 +1488,11 @@ export default function ShikeApp() {
                         <span>加载中...</span>
                       </div>
                     ) : captchaData?.svg ? (
-                      <div
-                        dangerouslySetInnerHTML={{ __html: captchaData.svg }}
-                        className="flex items-center justify-center"
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={`data:image/svg+xml;utf8,${encodeURIComponent(captchaData.svg)}`}
+                        alt="验证码"
+                        className="w-full h-full object-contain pointer-events-none"
                       />
                     ) : (
                       <span className="text-[11px] text-slate-400">点击获取</span>

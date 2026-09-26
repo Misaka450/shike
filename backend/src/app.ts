@@ -33,19 +33,18 @@ app.use('*', async (c, next) => {
 
 /**
  * CORS 配置（SEC-04）
- * 【安全修复】旧实现使用 origin: '*' 并放行 x-user-id 自定义头，
- * 意味着任意第三方网站都能跨域读取用户数据。
- * 现在改为白名单：只有 CORS_ORIGINS 中列出的来源才被允许；
+ * 【安全修复】白名单严格校验：只有 CORS_ORIGINS 中列出的来源才被允许；
+ * 未在白名单中的跨域请求严禁自动回退到首个白名单，必须明确拒绝（返回 undefined）；
  * 同时移除 x-user-id（身份一律走 Authorization 会话令牌）。
  */
 app.use(
   '*',
   cors({
     origin: (origin) => {
-      // 同源请求或非浏览器请求不带 Origin 头，直接放行
-      if (!origin) return config.CORS_ORIGINS[0];
-      // 命中白名单则原样返回，否则返回一个不匹配的值让浏览器自行拦截
-      return config.CORS_ORIGINS.includes(origin) ? origin : config.CORS_ORIGINS[0];
+      // 同源请求或非浏览器请求不带 Origin 头
+      if (!origin) return undefined;
+      // 命中白名单则放行，未命中白名单严格拒绝（返回 undefined），严禁自动回退到默认域名
+      return config.CORS_ORIGINS.includes(origin) ? origin : undefined;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],

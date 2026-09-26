@@ -67,14 +67,11 @@ SYNONYM_GROUPS.forEach((group, groupIndex) => {
  * 判断冰箱里的食材名与菜谱里的食材名是否指同一种东西
  *
  * 判定顺序：
- * 1. 完全相同；
- * 2. 互相包含（保留「土鸡蛋 / 鸡蛋」这类合法匹配）；
- * 3. 双方都是词典中的标准叫法 —— 直接比对分组下标；
- * 4. 至少一方带了修饰词（例如「有机土豆」）—— 退回按分组模糊扫描。
- *
- * 【正确性修复】第 3 步以前也走模糊扫描，于是「牛肉末」会因为包含「肉末」
- * 被判进「猪肉」分组、「猪肉末」也在这个分组里，两个不同的食材被误判为同一种。
- * 现在双标准词直接用精确分组比对，这个误判消失了。
+ * 1. 完全相同（忽略首尾空格与大小写）；
+ * 2. 双方均在同义词词典时，严格以分组 ID 相同为准判定匹配，严禁子串包含抢占；
+ * 3. 互斥保护（洋葱 vs 葱、牛肉末 vs 肉末等跨品类容易误匹配的食材严格互斥）；
+ * 4. 某一方不在词典时（如自由修饰词），允许子串包含模糊匹配（保留「土鸡蛋 / 鸡蛋」等）；
+ * 5. 基于同义词分组的模糊扫描兜底（如「有机土豆 / 马铃薯」）。
  */
 export function isIngredientMatch(invName: string, recName: string): boolean {
   const iNorm = invName.trim().toLowerCase();
@@ -85,17 +82,46 @@ export function isIngredientMatch(invName: string, recName: string): boolean {
   if (!iNorm || !rNorm) return false;
 
   if (iNorm === rNorm) return true;
-  if (iNorm.includes(rNorm) || rNorm.includes(iNorm)) return true;
 
   const iGroup = synonymIndex.get(iNorm);
   const rGroup = synonymIndex.get(rNorm);
 
-  // 两边都是词典里的标准叫法：分组相同才算同一种食材（O(1)）
+  // 【核心修复 LOG-01】当两个食材均在同义词词典时，严格以分组 ID 相同为准判定匹配；严禁子串包含抢先匹配！
   if (iGroup !== undefined && rGroup !== undefined) {
     return iGroup === rGroup;
   }
 
-  // 至少一方不在词典里（"有机土豆"、"土鸡蛋"…）：退化为模糊扫描，兼容自由写法
+  // 互斥保护：即使某一方不在词典（如带修饰词），特定容易语义混淆的食材严禁误匹配
+  // 1. 洋葱 与 葱（小葱/大葱/香葱/青葱/葱花等）互斥
+  if (
+    (iNorm.includes('洋葱') && !rNorm.includes('洋葱') && rNorm.includes('葱')) ||
+    (rNorm.includes('洋葱') && !iNorm.includes('洋葱') && iNorm.includes('葱'))
+  ) {
+    return false;
+  }
+
+  // 2. 牛肉末 与 肉末/猪肉末 互斥（以及牛肉制品与猪肉/通用肉末互斥）
+  if (
+    (iNorm.includes('牛肉') && !rNorm.includes('牛') && (rNorm.includes('肉末') || rNorm.includes('猪') || rNorm.includes('五花'))) ||
+    (rNorm.includes('牛肉') && !iNorm.includes('牛') && (iNorm.includes('肉末') || iNorm.includes('猪') || iNorm.includes('五花')))
+  ) {
+    return false;
+  }
+
+  // 3. 牛排 与 猪排 / 肉排 互斥
+  if (
+    (iNorm.includes('牛排') && !rNorm.includes('牛') && (rNorm.includes('猪排') || rNorm.includes('肉排'))) ||
+    (rNorm.includes('牛排') && !iNorm.includes('牛') && (iNorm.includes('猪排') || iNorm.includes('肉排')))
+  ) {
+    return false;
+  }
+
+  // 当且仅当某一方不在词典时才允许子串包含模糊匹配
+  if (iNorm.includes(rNorm) || rNorm.includes(iNorm)) {
+    return true;
+  }
+
+  // 至少一方不在词典里（"有机土豆"、"土鸡蛋"…）：退化为基于同义词分组的模糊扫描，兼容自由写法
   for (const group of SYNONYM_GROUPS) {
     const iInGroup = group.some((g) => iNorm.includes(g) || g.includes(iNorm));
     if (!iInGroup) continue;

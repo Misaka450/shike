@@ -607,7 +607,7 @@
       "出锅揭去保鲜膜，淋少许生抽、香油，撒上细葱花即可享用。"
     ],
     "tips": "用煮蛤蜊的原汤调蛋液是鲜味倍增的独家窍门，过筛加盖保鲜膜蒸出的蛋面如镜面般光滑",
-    "image_url": "/images/dishes/recipe_steamed_egg.webp"
+    "image_url": "/images/dishes/recipe_clam_steamed_egg.webp"
   },
   {
     "id": "recipe-cola-wings",
@@ -1836,7 +1836,7 @@
       "等待，直到锅内水的高度剩余食材高度的 0.1 倍时，开盖，放入蒜，搅拌均匀，关火。"
     ],
     "tips": "在操作的第 5-7 步骤中要注意：在此过程中注意锅底如果没有液体（油或水），则加 5 毫升的水再继续翻炒",
-    "image_url": "/images/dishes/recipe_htc_083a15958b.webp"
+    "image_url": "/images/dishes/recipe_htc_083a15958b_v2.webp"
   },
   {
     "id": "recipe-htc-0856952afa",
@@ -10258,7 +10258,7 @@
       "等到锅内所有茄子变色且变软时捞出。"
     ],
     "tips": "因为酱油的缘故，所以本菜不必加盐。出锅之前可以尝一下，如果不咸可以加微量的盐，下次炒时酱油量要增加；如果加了虾皮，可以将酱油量酌情减少。；炒本菜时，一直大火即可。；切忌！一定不可加水，会变成水煮茄子，口感差，所以油可多放，不可少放。；如果家用灶达到 7 成油温后温度不再继续明显上升，可直接进行下一步，不必强求 9 成油温。；糖和醋在最后阶段加，翻炒 20 秒就出锅，避免过早加醋，否则酸味挥发",
-    "image_url": "/images/dishes/qiezi_dun_tudou.webp"
+    "image_url": "/images/dishes/recipe_chao_qiezi.webp"
   },
   {
     "id": "recipe-htc-7ffed7f6c3",
@@ -17244,62 +17244,6 @@
     "image_url": "/images/dishes/recipe_steamed_egg.webp"
   },
   {
-    "id": "recipe-htc-d3a0bb2911",
-    "name": "紫菜蛋花汤",
-    "category": "靓汤羹品",
-    "cuisine": "中餐",
-    "difficulty": "中等",
-    "prep_time": 5,
-    "cook_time": 15,
-    "servings": 1,
-    "ingredients": [
-      {
-        "name": "鸡蛋",
-        "amount": "适量",
-        "required": true
-      },
-      {
-        "name": "盐",
-        "amount": "2 克",
-        "required": false
-      },
-      {
-        "name": "紫菜",
-        "amount": "适量",
-        "required": true
-      },
-      {
-        "name": "葱",
-        "amount": "适量",
-        "required": false
-      },
-      {
-        "name": "水",
-        "amount": "适量",
-        "required": false
-      },
-      {
-        "name": "油",
-        "amount": "适量",
-        "required": false
-      },
-      {
-        "name": "虾仁",
-        "amount": "适量",
-        "required": true
-      }
-    ],
-    "instructions": [
-      "干紫菜用清水泡 15 分钟，捞起沥干水份备用。",
-      "热锅，倒入 1.5 升清水、5ml 油、2g 盐。待水开后放入紫菜。",
-      "紫菜烧开后 3 分钟，将打好的蛋液徐徐倒入锅内，30 秒既可起锅。",
-      "撒上葱花，转小火 20 秒。",
-      "关火，出锅前放入几滴香油，也有的会放入一点虾皮，味道也不错。"
-    ],
-    "tips": "水开后，将火关小，将打好的蛋液围绕中间沸腾的水倒入。为了使蛋花比较嫩，锅盖盖上熄灭火等半分钟后再打开.；如果喜欢浓稠口感，可加入 2g 淀粉.",
-    "image_url": "/images/dishes/recipe_egg_drop_soup.webp"
-  },
-  {
     "id": "recipe-htc-d43b1b8c3b",
     "name": "冬瓜酿肉",
     "category": "荤菜",
@@ -21305,72 +21249,6 @@
     ],
     "tips": "微沸定型肉丸不易散开，冬瓜清甜利水吸满肉香，汤清味美肉丸爽脆多汁",
     "image_url": "https://bkimg.cdn.bcebos.com/pic/8ad4b31c8701a18b87d6d32a9976100828381f305006?x-bce-process=image/resize,m_lfit,w_536,limit_1/quality,Q_70"
-  },
-  {
-    "id": "recipe-yuxiang-eggplant",
-    "name": "鱼香茄子煲",
-    "category": "家常菜",
-    "cuisine": "川菜",
-    "difficulty": "中等",
-    "prep_time": 10,
-    "cook_time": 35,
-    "servings": 3,
-    "ingredients": [
-      {
-        "name": "茄子",
-        "amount": "2根",
-        "required": true
-      },
-      {
-        "name": "猪肉",
-        "amount": "80g",
-        "required": true
-      },
-      {
-        "name": "大蒜",
-        "amount": "5瓣",
-        "required": false
-      },
-      {
-        "name": "生姜",
-        "amount": "1小块",
-        "required": false
-      },
-      {
-        "name": "葱",
-        "amount": "1根",
-        "required": false
-      },
-      {
-        "name": "香醋",
-        "amount": "2勺",
-        "required": false
-      },
-      {
-        "name": "白糖",
-        "amount": "1.5勺",
-        "required": false
-      },
-      {
-        "name": "生抽",
-        "amount": "1.5勺",
-        "required": false
-      },
-      {
-        "name": "淀粉",
-        "amount": "1勺",
-        "required": false
-      }
-    ],
-    "instructions": [
-      "茄子滚刀切块，撒少许干淀粉抓匀；小碗调鱼香汁（生抽、香醋、糖、淀粉加半碗清水拌匀）。",
-      "锅中多放少许油，下入茄子中小火半煎半炸至表面微黄变软盛出沥油。",
-      "底油爆香姜蒜末和猪肉末，淋入调好的鱼香汁大火煮沸至起大泡。",
-      "倒回炸软的茄子快速颠锅翻炒裹匀酱汁。",
-      "换入烧热的砂锅煲中，小火焖煨半分钟激发出香气，撒上葱花趁热上桌。"
-    ],
-    "tips": "经典的鱼香黄金比例为醋:糖:生抽约4:3:3，咸甜微酸带蒜香，极其下饭",
-    "image_url": "/images/dishes/roumo_qiezi.webp"
   },
   {
     "id": "recipe-yuxiang-pork",

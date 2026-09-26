@@ -10,6 +10,8 @@ import {
   recordFailedLogin,
   resetLoginFailures,
   getClientIp,
+  isIdentifiableClientIp,
+  checkRateLimit,
   hashPassword,
   verifyPassword,
   dummyTimingCheck,
@@ -75,6 +77,22 @@ authRoute.post('/guest', optionalAuth, async (c) => {
         migrated_legacy_data: false,
       },
     });
+  }
+
+  // 【安全加固 SEC-02】访客注册接口频控：单 IP 每分钟最多 15 次，防止恶意脚本刷爆 sessions 表
+  const clientIp = getClientIp(c);
+  if (isIdentifiableClientIp(clientIp)) {
+    const rate = checkRateLimit(`auth:guest:ip:${clientIp}`, 15, 60 * 1000);
+    if (!rate.allowed) {
+      return c.json(
+        {
+          success: false,
+          code: 'RATE_LIMITED',
+          error: `创建访客会话过于频繁，请 ${rate.retryAfterSeconds} 秒后再试`,
+        },
+        429
+      );
+    }
   }
 
   const guestId = generateUserId('guest');

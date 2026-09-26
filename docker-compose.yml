@@ -14,10 +14,10 @@ services:
       - DB_PATH=/opt/shike-ai/data/db/shike.db
       # 允许跨域访问后端的来源白名单（多个用英文逗号分隔）
       - CORS_ORIGINS=${CORS_ORIGINS:-http://127.0.0.1:3002,http://localhost:3002}
-      # 当前拓扑是端口直连、前面没有反向代理，因此默认不信任 X-Forwarded-For（防止伪造 IP 绕过登录限流）
-      - TRUST_PROXY=${TRUST_PROXY:-false}
+      # 前端 Next.js rewrites 实际上作为反向代理访问后端，因此必须开启 TRUST_PROXY
+      - TRUST_PROXY=${TRUST_PROXY:-true}
     volumes:
-      - /opt/shike-ai/data:/opt/shike-ai/data
+      - ./data:/opt/shike-ai/data
     networks:
       - default
       - cliproxyapi_default
