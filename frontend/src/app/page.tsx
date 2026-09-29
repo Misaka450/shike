@@ -511,18 +511,18 @@ export default function ShikeApp() {
       )}
 
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-[#FAFAF7]/85 dark:bg-[#141514]/85 backdrop-blur-md border-b border-[#1C1D1B]/[0.06] dark:border-white/[0.08] px-3.5 sm:px-4 lg:px-8 py-2.5 sm:py-3.5 transition-colors">
+      <header className="sticky top-0 z-40 bg-[#FAFAF7]/85 dark:bg-[#141514]/85 backdrop-blur-md border-b border-[#1C1D1B]/[0.06] dark:border-white/[0.08] px-4 lg:px-8 py-2.5 sm:py-3.5 transition-colors">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <img
               src="/images/logo.webp"
               alt="食刻 AI Logo"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl object-cover shadow-soft border border-[#1C1D1B]/[0.08] shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover shadow-soft border border-[#1C1D1B]/[0.08] shrink-0"
             />
             <div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-bold text-sm sm:text-base tracking-tight text-[#1C1D1B] dark:text-[#EDEDE8]">食刻 AI</span>
-                <span className="text-[10px] sm:text-[11px] font-medium px-2 py-0.5 rounded-full bg-forest-50 dark:bg-forest-950/80 text-forest-700 dark:text-forest-300 border border-forest-200/60 dark:border-forest-800/60">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-base sm:text-lg tracking-tight text-[#1C1D1B] dark:text-[#EDEDE8]">食刻 AI</span>
+                <span className="hidden sm:inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full bg-forest-50 dark:bg-forest-950/80 text-forest-700 dark:text-forest-300 border border-forest-200/60 dark:border-forest-800/60">
                   智能冰箱管家
                 </span>
               </div>
@@ -543,10 +543,11 @@ export default function ShikeApp() {
               )}
             </div>
 
+            {/* AI 菜谱按钮：移动端在下方主标题旁已有专属大按钮，此处在移动端隐藏，消除重复堆叠；桌面端保留 */}
             <button
               onClick={handleTriggerAiChef}
               disabled={isAiGenerating}
-              className="group btn-shimmer-caramel flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-caramel-500 via-caramel-600 to-caramel-500 bg-[length:200%_auto] hover:bg-right hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 text-white text-xs font-medium shadow-ambient-caramel transition-all duration-300 active:scale-95"
+              className="hidden sm:flex group btn-shimmer-caramel items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-caramel-500 via-caramel-600 to-caramel-500 bg-[length:200%_auto] hover:bg-right hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 text-white text-xs font-medium shadow-ambient-caramel transition-all duration-300 active:scale-95"
               title={`根据冰箱现有食材，让 AI 大厨现场设计 ${AI_RECIPE_COUNT} 道菜谱`}
             >
               <Sparkles className={`w-3.5 h-3.5 text-amber-200 transition-transform duration-300 ${isAiGenerating ? 'animate-spin' : 'group-hover:rotate-12 group-hover:scale-110 group-active:-rotate-12'}`} />
@@ -568,7 +569,7 @@ export default function ShikeApp() {
                   setAuthMode('login');
                   setShowAuthModal(true);
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100/90 dark:bg-stone-800/80 hover:bg-stone-200/80 text-stone-700 dark:text-stone-200 text-xs font-medium transition-all active:scale-95 border border-stone-200/60 dark:border-stone-700/60"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100/90 dark:bg-stone-800/80 hover:bg-stone-200/80 text-stone-700 dark:text-stone-200 text-xs font-medium transition-all active:scale-95 border border-stone-200/60 dark:border-stone-700/60 shadow-xs"
                 title="登录后可跨电脑、手机实时同步冰箱数据"
               >
                 <User className="w-3.5 h-3.5 text-stone-500" />
@@ -576,15 +577,15 @@ export default function ShikeApp() {
                 <span className="hidden sm:inline">登录 / 同步</span>
               </button>
             ) : (
-              <div className="flex items-center gap-1.5 sm:gap-2 bg-forest-50/90 dark:bg-forest-950/80 text-forest-800 dark:text-forest-200 border border-forest-200/70 dark:border-forest-800/70 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium shadow-xs">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-forest-50/90 dark:bg-forest-950/80 text-forest-800 dark:text-forest-200 border border-forest-200/70 dark:border-forest-800/70 pl-2.5 pr-2 py-1 rounded-full text-xs font-medium shadow-xs">
                 <span className="relative flex h-2 w-2 shrink-0 items-center justify-center" title="数据多端实时同步中">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-forest-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-forest-600 dark:bg-forest-400" />
                 </span>
-                <span className="truncate max-w-[70px] sm:max-w-none">{userProfile.nickname || userProfile.username}</span>
+                <span className="truncate max-w-[80px] sm:max-w-none text-xs">{userProfile.nickname || userProfile.username}</span>
                 <button
                   onClick={handleLogout}
-                  className="ml-1 text-stone-400 hover:text-rose-500 transition-colors shrink-0"
+                  className="ml-0.5 text-stone-400 hover:text-rose-500 transition-colors shrink-0 p-0.5"
                   title="退出登录"
                 >
                   <LogOut className="w-3 h-3" />
