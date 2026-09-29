@@ -312,18 +312,33 @@ export async function deleteInventoryItem(id: number): Promise<{ success: boolea
   });
 }
 
-export async function scanFridgeImage(file: File): Promise<FridgeScanResult> {
+export async function scanFridgeImage(file: File | Blob | string): Promise<FridgeScanResult> {
   await ensureSession();
 
-  const formData = new FormData();
-  formData.append('file', file);
+  let response: Response;
 
-  // 注意：FormData 不能手动设置 Content-Type，浏览器需要自动补上 multipart 边界
-  const response = await doFetch(
-    '/api/vision/fridge-scan',
-    { method: 'POST', body: formData },
-    getToken()
-  );
+  if (typeof file === 'string') {
+    // 传输 Base64 压缩图片
+    response = await doFetch(
+      '/api/vision/fridge-scan',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: file }),
+      },
+      getToken()
+    );
+  } else {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // 注意：FormData 不能手动设置 Content-Type，浏览器需要自动补上 multipart 边界
+    response = await doFetch(
+      '/api/vision/fridge-scan',
+      { method: 'POST', body: formData },
+      getToken()
+    );
+  }
 
   if (!response.ok) {
     throw new ApiError(await toErrorMessage(response), response.status);

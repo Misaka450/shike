@@ -64,23 +64,26 @@ SYNONYM_GROUPS.forEach((group, groupIndex) => {
 });
 
 /**
- * 判断冰箱里的食材名与菜谱里的食材名是否指同一种东西
- *
- * 判定顺序：
- * 1. 完全相同（忽略首尾空格与大小写）；
- * 2. 双方均在同义词词典时，严格以分组 ID 相同为准判定匹配，严禁子串包含抢占；
- * 3. 互斥保护（洋葱 vs 葱、牛肉末 vs 肉末等跨品类容易误匹配的食材严格互斥）；
- * 4. 某一方不在词典时（如自由修饰词），允许子串包含模糊匹配（保留「土鸡蛋 / 鸡蛋」等）；
- * 5. 基于同义词分组的模糊扫描兜底（如「有机土豆 / 马铃薯」）。
+ * 清除常见的状态、加工及修饰词，提取食材核心实体词
+ * 例如："去皮土豆块" -> "土豆", "手打牛肉丸" -> "牛肉丸", "冷冻鲜虾仁" -> "虾仁"
  */
-export function isIngredientMatch(invName: string, recName: string): boolean {
-  const iNorm = invName.trim().toLowerCase();
-  const rNorm = recName.trim().toLowerCase();
+export function stripIngredientModifiers(name: string): string {
+  let cleaned = name.trim().toLowerCase();
+  // 剥离括号备注，如 "土豆(大)" -> "土豆"
+  cleaned = cleaned.replace(/[\(（][^\)）]*[\)）]/g, '');
+  // 剥离常见加工/状态前缀
+  cleaned = cleaned.replace(/^(新鲜|鲜|去皮|切块|切片|切丁|熟|生|冷冻|冻|自制|手打|特级|精选|有机|普通|纯)+/, '');
+  // 剥离常见加工后缀（如 "块"、"丁"、"段"、"碎"），但保留本身作为词根的（如肉丝、土豆块等）
+  if (cleaned.length > 2 && !/肉丝|粉丝|面条|排骨/.test(cleaned)) {
+    cleaned = cleaned.replace(/(块|片|丁|段|碎|粒)$/, '');
+  }
+  return cleaned.trim() || name.trim().toLowerCase();
+}
 
-  // 空字符串参与包含判断时会恒为真（"任意字符串".includes("") === true），
-  // 因此必须先把空值挡掉，避免脏数据把所有菜谱都判成"匹配"
-  if (!iNorm || !rNorm) return false;
-
+/**
+ * 内部核心匹配逻辑（单层判定）
+ */
+function checkDirectMatch(iNorm: string, rNorm: string): boolean {
   if (iNorm === rNorm) return true;
 
   const iGroup = synonymIndex.get(iNorm);
@@ -127,6 +130,29 @@ export function isIngredientMatch(invName: string, recName: string): boolean {
     if (!iInGroup) continue;
     const rInGroup = group.some((g) => rNorm.includes(g) || g.includes(rNorm));
     if (rInGroup) return true;
+  }
+
+  return false;
+}
+
+/**
+ * 判断冰箱里的食材名与菜谱里的食材名是否指同一种东西
+ * 包含双重语义归一化容差匹配
+ */
+export function isIngredientMatch(invName: string, recName: string): boolean {
+  const iNorm = invName.trim().toLowerCase();
+  const rNorm = recName.trim().toLowerCase();
+
+  if (!iNorm || !rNorm) return false;
+
+  // 1. 原始文本直接判定
+  if (checkDirectMatch(iNorm, rNorm)) return true;
+
+  // 2. 词干修饰词归一化后深度二次判定（如 "去皮土豆块" 归一化为 "土豆" 与 "马铃薯" 成功配对）
+  const iStripped = stripIngredientModifiers(iNorm);
+  const rStripped = stripIngredientModifiers(rNorm);
+  if (iStripped !== iNorm || rStripped !== rNorm) {
+    if (checkDirectMatch(iStripped, rStripped)) return true;
   }
 
   return false;

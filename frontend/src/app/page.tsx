@@ -26,6 +26,9 @@ import {
   BookOpen,
   Trash2,
   Maximize2,
+  ShoppingCart,
+  Zap,
+  Copy,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -49,6 +52,17 @@ import {
   fetchCaptcha,
   MAX_UPLOAD_BYTES,
 } from '@/lib/api';
+import { compressImage, dataUrlToFile } from '@/lib/imageCompress';
+import {
+  matchIngredientKnowledge,
+  searchIngredientSuggestions,
+  IngredientKnowledge,
+} from '@/lib/ingredientKnowledge';
+import {
+  calculateMissingIngredients,
+  generateShoppingListText,
+  copyToClipboard,
+} from '@/lib/shoppingList';
 import { getMealPeriod, MealPeriodInfo } from '@/lib/mealPeriod';
 import { playTimerDoneSound, playCookSuccessSound, playShutterSound } from '@/lib/sound';
 import EmotionalEmptyState from '@/components/EmotionalEmptyState';
@@ -200,16 +214,19 @@ export default function ShikeApp() {
   // Scanning State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressStats, setCompressStats] = useState<{
+    originalSize: number;
+    compressedSize: number;
+  } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<FridgeScanResult | null>(null);
   const [selectedScanItems, setSelectedScanItems] = useState<Record<number, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 【修复 MEM-01】统一在预览地址变化时释放上一个 blob URL（组件卸载时也会释放）。
-  // 旧实现只在「换一张图」时手动 revoke，关闭弹窗 / 直接置空等路径都会漏掉，
-  // 反复拍照会让浏览器里堆积无法回收的对象 URL。
+  // 【修复 MEM-01】统一在预览地址变化时释放上一个 blob URL（Base64 URL 无需释放）
   useEffect(() => {
-    if (!previewUrl) return;
+    if (!previewUrl || !previewUrl.startsWith('blob:')) return;
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
@@ -220,6 +237,47 @@ export default function ShikeApp() {
   const [newItemQty, setNewItemQty] = useState('1个');
   const [newItemLocation, setNewItemLocation] = useState('冷藏室');
   const [newItemDays, setNewItemDays] = useState(5);
+
+  // 生鲜常识库模糊匹配与智能推荐
+  const matchedKnowledge = useMemo(
+    () => matchIngredientKnowledge(newItemName),
+    [newItemName]
+  );
+  const knowledgeSuggestions = useMemo(
+    () => searchIngredientSuggestions(newItemName, 4),
+    [newItemName]
+  );
+
+  const applyIngredientKnowledge = (k: IngredientKnowledge) => {
+    setNewItemName(k.name);
+    setNewItemCategory(k.category);
+    setNewItemLocation(k.location);
+    setNewItemDays(k.shelfLifeDays);
+    showToast(`已按常识预填「${k.name}」：${k.category} · ${k.location} · 推荐保质${k.shelfLifeDays}天`);
+  };
+
+  const calculatedExpiryDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + (Number(newItemDays) || 3));
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+  }, [newItemDays]);
+
+  // 菜谱详情缺少食材差额计算
+  const modalMissing = useMemo(
+    () => (selectedRecipe ? calculateMissingIngredients(selectedRecipe, inventory) : []),
+    [selectedRecipe, inventory]
+  );
+
+  const handleCopyShoppingList = async () => {
+    if (!selectedRecipe || modalMissing.length === 0) return;
+    const text = generateShoppingListText(selectedRecipe, modalMissing);
+    const success = await copyToClipboard(text);
+    if (success) {
+      showToast('已复制清单，直接发给微信或便签即可照着买！');
+    } else {
+      showToast('复制失败，请重试');
+    }
+  };
 
   // Cooking Timer State
   const [cookingTimer, setCookingTimer] = useState<number>(120);
@@ -308,41 +366,74 @@ export default function ShikeApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTimerRunning]);
 
-  // Handle Photo Upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 识图多模态链路加速：端侧等比智能压缩 (拍照 / 上传)
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 【体验与安全】前端先做一轮校验，避免用户白等上传后才被服务端拒绝
+    // 前端格式校验
     if (!file.type.startsWith('image/')) {
       showToast('请选择 JPG / PNG / WebP 格式的图片');
       e.target.value = '';
       return;
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      // 上限文案跟随 MAX_UPLOAD_BYTES，改配置后提示不会与实际限制脱节
-      showToast(
-        `图片过大（${(file.size / 1024 / 1024).toFixed(1)}MB），请压缩到 ${(
-          MAX_UPLOAD_BYTES /
-          1024 /
-          1024
-        ).toFixed(0)}MB 以内`
-      );
-      e.target.value = '';
-      return;
-    }
 
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setScanResult(null);
+    try {
+      setIsCompressing(true);
+      const originalBytes = file.size;
+
+      // 利用 HTML5 Canvas 端侧等比智能压缩至最大宽高 1280px，质量 0.82
+      const compressedDataUrl = await compressImage(file, 1280, 0.82);
+      const compressedFile = dataUrlToFile(
+        compressedDataUrl,
+        (file.name || 'fridge_scan').replace(/\.[^.]+$/, '') + '.webp'
+      );
+
+      setSelectedFile(compressedFile);
+      setPreviewUrl(compressedDataUrl);
+      setScanResult(null);
+
+      const compressedBytes = Math.round((compressedDataUrl.length * 3) / 4);
+      setCompressStats({
+        originalSize: originalBytes,
+        compressedSize: compressedBytes,
+      });
+
+      const origMB = (originalBytes / 1024 / 1024).toFixed(1);
+      const compKB = Math.round(compressedBytes / 1024);
+      showToast(`已完成端侧智能压缩（${origMB}MB → ${compKB}KB），多模态识别极速就绪！`);
+    } catch (err: any) {
+      // 容灾降级：使用原文件
+      if (file.size > MAX_UPLOAD_BYTES) {
+        showToast(
+          `图片过大（${(file.size / 1024 / 1024).toFixed(1)}MB），请压缩到 ${(
+            MAX_UPLOAD_BYTES /
+            1024 /
+            1024
+          ).toFixed(0)}MB 以内`
+        );
+        e.target.value = '';
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setScanResult(null);
+    } finally {
+      setIsCompressing(false);
+      e.target.value = '';
+    }
   };
+
+  const handleImageUpload = handleFileSelect;
+  const handleFileChange = handleFileSelect;
 
   // Trigger AI Scan
   const handleStartScan = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile && !previewUrl) return;
     try {
       setIsScanning(true);
-      const res = await scanFridgeImage(selectedFile);
+      // 优先传输已在端侧完成智能压缩的 Base64 数据或压缩文件
+      const res = await scanFridgeImage(previewUrl || selectedFile!);
       setScanResult(res);
       // Select all by default
       const initialSelected: Record<number, boolean> = {};
@@ -1017,6 +1108,31 @@ export default function ShikeApp() {
                         </span>
                       )}
                     </div>
+
+                    {/* 差额食材清单提示（匹配率未达 100% 时精准展示缺少清单） */}
+                    {(() => {
+                      const missingList = calculateMissingIngredients(recipe, inventory);
+                      if (missingList.length > 0 && (recipe.match_rate || 0) < 1) {
+                        return (
+                          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-800/50 rounded-xl px-2.5 py-1.5 shadow-xs">
+                            <ShoppingCart className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="truncate">
+                              缺 {missingList.length} 样：{missingList.slice(0, 3).map((m) => m.name).join('、')}
+                              {missingList.length > 3 ? ' 等' : ''}
+                            </span>
+                          </div>
+                        );
+                      }
+                      if ((recipe.match_rate || 0) >= 1) {
+                        return (
+                          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/50 rounded-xl px-2.5 py-1.5 shadow-xs">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span>食材全部齐备 · 随时可下厨</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   <div className="mt-5 pt-3.5 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
@@ -1050,11 +1166,25 @@ export default function ShikeApp() {
                 type="file"
                 accept="image/*"
                 ref={fileInputRef}
-                onChange={handleFileChange}
+                onChange={handleFileSelect}
                 className="hidden"
               />
 
-              {!previewUrl ? (
+              {isCompressing && (
+                <div className="py-12 flex flex-col items-center justify-center gap-3">
+                  <div className="w-9 h-9 border-3 border-forest-600 border-t-transparent rounded-full animate-spin" />
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+                      端侧等比智能画质压缩中...
+                    </p>
+                    <p className="text-xs text-stone-400 mt-1">
+                      HTML5 Canvas 智能降采样并输出 WebP，识图多模态链路大幅提速
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!isCompressing && !previewUrl ? (
                 <div
                   onClick={() => {
                     playShutterSound();
@@ -1069,13 +1199,30 @@ export default function ShikeApp() {
                     <span className="font-semibold text-sm text-stone-800 dark:text-stone-200">
                       点击上传或直接拍照
                     </span>
-                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">支持普通手机实拍照片</p>
+                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
+                      支持高清手机原图 · 端侧自动智能等比压缩与提速
+                    </p>
                   </div>
                 </div>
-              ) : (
+              ) : !isCompressing && previewUrl ? (
                 <div className="space-y-4">
                   <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800 max-h-[360px] mx-auto border border-stone-200/80 dark:border-stone-700">
                     <img src={previewUrl} alt="冰箱预览" className="w-full h-full object-cover" />
+
+                    {/* 压缩体积优化微标签 */}
+                    {compressStats && (
+                      <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md text-white text-[11px] font-mono shadow-sm border border-white/10 z-10">
+                        <Zap className="w-3.5 h-3.5 text-caramel-300" />
+                        <span>
+                          智能压缩 {(compressStats.originalSize / 1024 / 1024).toFixed(1)}MB →{' '}
+                          {Math.round(compressStats.compressedSize / 1024)}KB (降幅{' '}
+                          {Math.round(
+                            (1 - compressStats.compressedSize / compressStats.originalSize) * 100
+                          )}
+                          %)
+                        </span>
+                      </div>
+                    )}
 
                     {/* 拍冰箱识图「激光雷达扫描波」（Laser Scan Beam） */}
                     {isScanning && (
@@ -1112,6 +1259,7 @@ export default function ShikeApp() {
                         setSelectedFile(null);
                         setPreviewUrl(null);
                         setScanResult(null);
+                        setCompressStats(null);
                       }}
                       className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition-colors shadow-sm disabled:opacity-30 disabled:pointer-events-none z-10"
                     >
@@ -1139,7 +1287,7 @@ export default function ShikeApp() {
                     </button>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Scan Results Bottom Sheet / Card */}
@@ -1449,26 +1597,106 @@ export default function ShikeApp() {
               )}
 
               {/* Ingredients Breakdown */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between">
                   <h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 tracking-wider">
                     食材备料清单
                   </h4>
-                  <span className="text-[11px] text-stone-400 dark:text-stone-500">
-                    共 {selectedRecipe.ingredients.length} 样
-                  </span>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className="text-stone-400 dark:text-stone-500">
+                      共 {selectedRecipe.ingredients.length} 样
+                    </span>
+                    {modalMissing.length > 0 ? (
+                      <span className="text-amber-700 dark:text-amber-300 font-medium">
+                        · 缺 {modalMissing.length} 样需补齐
+                      </span>
+                    ) : (
+                      <span className="text-emerald-700 dark:text-emerald-300 font-medium">
+                        · 冰箱食材已全备齐
+                      </span>
+                    )}
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {selectedRecipe.ingredients.map((ing, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-black/[0.04] dark:border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] flex items-center justify-between text-xs transition-all hover:bg-stone-100/70 dark:hover:bg-stone-800/70"
-                    >
-                      <span className="font-medium text-stone-800 dark:text-stone-200">{ing.name}</span>
-                      <span className="text-stone-400 dark:text-stone-500 tabular-nums">{ing.amount}</span>
-                    </div>
-                  ))}
+                  {selectedRecipe.ingredients.map((ing, idx) => {
+                    const isMissing = modalMissing.some(
+                      (m) =>
+                        m.name.toLowerCase().includes(ing.name.toLowerCase()) ||
+                        ing.name.toLowerCase().includes(m.name.toLowerCase())
+                    );
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                          isMissing
+                            ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-800/50 text-amber-950 dark:text-amber-200'
+                            : 'bg-stone-50 dark:bg-stone-800/50 border-black/[0.04] dark:border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] text-stone-800 dark:text-stone-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 truncate">
+                          {isMissing ? (
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5 text-forest-600 dark:text-forest-400 shrink-0" />
+                          )}
+                          <span className="font-medium truncate">{ing.name}</span>
+                        </div>
+                        <span
+                          className={`tabular-nums shrink-0 ml-1 ${
+                            isMissing
+                              ? 'text-amber-700 dark:text-amber-400'
+                              : 'text-stone-400 dark:text-stone-500'
+                          }`}
+                        >
+                          {ing.amount}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
+
+                {/* 差额买菜补货清单卡片与一键生成 */}
+                {modalMissing.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-amber-50/85 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 shadow-soft space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-amber-950 dark:text-amber-100">
+                          <ShoppingCart className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span>差额买菜补货清单 · 缺少 {modalMissing.length} 样食材</span>
+                        </div>
+                        <p className="text-[11px] text-amber-800/80 dark:text-amber-400">
+                          从看到买到做，一键复制清单发给微信或备忘录照着买
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyShoppingList}
+                        className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-medium text-xs shadow-soft transition-all flex items-center justify-center gap-1.5 shrink-0"
+                        title="一键复制买菜清单到剪贴板"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>🛒 生成买菜补货清单</span>
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {modalMissing.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="px-2.5 py-1.5 rounded-lg bg-white/90 dark:bg-stone-800/90 border border-amber-200/70 dark:border-amber-900/50 flex items-center gap-2 text-xs shadow-2xs"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span className="font-medium text-stone-900 dark:text-stone-100">{item.name}</span>
+                          <span className="text-[11px] text-amber-700 dark:text-amber-400 font-mono">
+                            {item.amount || '适量'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Step By Step Instructions - 舒展行距与大字号，便于厨房远距离扫读 */}
@@ -1608,15 +1836,48 @@ export default function ShikeApp() {
 
             <form onSubmit={handleManualAdd} className="space-y-3.5">
               <div>
-                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">食材名称</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">食材名称</label>
+                  {matchedKnowledge && (
+                    <span className="text-[11px] text-forest-700 dark:text-forest-400 font-medium">
+                      💡 已识别：{matchedKnowledge.category} · 推荐保质{matchedKnowledge.shelfLifeDays}天
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   required
-                  placeholder="如：西红柿、土豆、五花肉"
+                  placeholder="如：西红柿、土豆、五花肉、大虾"
                   value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewItemName(val);
+                    const k = matchIngredientKnowledge(val);
+                    if (k) {
+                      setNewItemCategory(k.category);
+                      setNewItemLocation(k.location);
+                      setNewItemDays(k.shelfLifeDays);
+                    }
+                  }}
                   className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                 />
+
+                {/* 智能生鲜常识联想建议 */}
+                {knowledgeSuggestions.length > 0 && !matchedKnowledge && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-stone-400">常识联想：</span>
+                    {knowledgeSuggestions.map((item) => (
+                      <button
+                        key={item.name}
+                        type="button"
+                        onClick={() => applyIngredientKnowledge(item)}
+                        className="px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-[11px] text-stone-600 dark:text-stone-300 hover:bg-forest-50 dark:hover:bg-forest-950/40 hover:text-forest-700 dark:hover:text-forest-300 transition-colors"
+                      >
+                        {item.name} ({item.shelfLifeDays}天)
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1665,11 +1926,14 @@ export default function ShikeApp() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">保存天数</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">保存天数</label>
+                    <span className="text-[10px] text-stone-400">至 {calculatedExpiryDate}</span>
+                  </div>
                   <input
                     type="number"
                     min="1"
-                    max="60"
+                    max="180"
                     value={newItemDays}
                     onChange={(e) => setNewItemDays(Number(e.target.value))}
                     className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
