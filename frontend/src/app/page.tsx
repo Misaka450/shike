@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ChefHat,
   Camera,
@@ -25,6 +25,7 @@ import {
   ExternalLink,
   BookOpen,
   Trash2,
+  Maximize2,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -48,6 +49,10 @@ import {
   fetchCaptcha,
   MAX_UPLOAD_BYTES,
 } from '@/lib/api';
+import { getMealPeriod, MealPeriodInfo } from '@/lib/mealPeriod';
+import { playTimerDoneSound, playCookSuccessSound, playShutterSound } from '@/lib/sound';
+import EmotionalEmptyState from '@/components/EmotionalEmptyState';
+import KitchenCookMode from '@/components/KitchenCookMode';
 
 /** 点击「AI 菜谱」按钮时一次生成的菜谱数量 */
 const AI_RECIPE_COUNT = 3;
@@ -72,6 +77,77 @@ export default function ShikeApp() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeRecommendation | null>(null);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+
+  // 场景与时序化动态餐段
+  const [mealPeriod, setMealPeriod] = useState<MealPeriodInfo>(() => getMealPeriod(new Date(), 0));
+
+  // 灵感流场景胶囊筛选
+  type RecipeFilterKey = 'all' | 'quick' | 'soup' | 'light' | 'urgent';
+  const [recipeFilter, setRecipeFilter] = useState<RecipeFilterKey>('all');
+
+  // 灶台大字专注下厨模式状态
+  const [isKitchenCookMode, setIsKitchenCookMode] = useState<boolean>(false);
+
+  // 实时更新餐段（每分钟校准一次）
+  useEffect(() => {
+    setMealPeriod(getMealPeriod(new Date(), inventory.length));
+    const timer = setInterval(() => {
+      setMealPeriod(getMealPeriod(new Date(), inventory.length));
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [inventory.length]);
+
+  // 灵感流智能场景胶囊分类数量统计
+  const filterCounts = useMemo(() => {
+    return {
+      all: recipes.length,
+      quick: recipes.filter((r) => (r.cook_time || 0) <= 15).length,
+      soup: recipes.filter(
+        (r) => (r.category && r.category.includes('汤')) || (r.name && r.name.includes('汤'))
+      ).length,
+      light: recipes.filter((r) => {
+        const text = `${r.category || ''} ${r.cuisine || ''} ${r.name || ''}`;
+        return /沙拉|轻食|素|减脂|低卡/.test(text);
+      }).length,
+      urgent: recipes.filter(
+        (r) =>
+          (r.urgency_boost && r.urgency_boost > 0) ||
+          (r.matched_ingredients &&
+            r.matched_ingredients.some(
+              (m) => m.urgency_level === 'red' || m.urgency_level === 'yellow'
+            ))
+      ).length,
+    };
+  }, [recipes]);
+
+  // 经场景胶囊实时平滑过滤后的推荐列表
+  const displayedRecipes = useMemo(() => {
+    if (recipeFilter === 'quick') {
+      return recipes.filter((r) => (r.cook_time || 0) <= 15);
+    }
+    if (recipeFilter === 'soup') {
+      return recipes.filter(
+        (r) => (r.category && r.category.includes('汤')) || (r.name && r.name.includes('汤'))
+      );
+    }
+    if (recipeFilter === 'light') {
+      return recipes.filter((r) => {
+        const text = `${r.category || ''} ${r.cuisine || ''} ${r.name || ''}`;
+        return /沙拉|轻食|素|减脂|低卡/.test(text);
+      });
+    }
+    if (recipeFilter === 'urgent') {
+      return recipes.filter(
+        (r) =>
+          (r.urgency_boost && r.urgency_boost > 0) ||
+          (r.matched_ingredients &&
+            r.matched_ingredients.some(
+              (m) => m.urgency_level === 'red' || m.urgency_level === 'yellow'
+            ))
+      );
+    }
+    return recipes;
+  }, [recipes, recipeFilter]);
 
   // User Auth State
   const [userProfile, setUserProfile] = useState<{
@@ -221,6 +297,7 @@ export default function ShikeApp() {
       setCookingTimer(remaining);
       if (remaining <= 0) {
         setIsTimerRunning(false);
+        playTimerDoneSound();
       }
     }, 1000);
 
@@ -457,11 +534,13 @@ export default function ShikeApp() {
     try {
       await cookRecipe(recipe.id, true);
       setIsCookingSuccess(true);
+      playCookSuccessSound();
       setCookingMessage(`🎉 成功烹饪「${recipe.name}」，已自动扣减在库消耗食材！`);
       showToast(`已扣减「${recipe.name}」所用食材`);
       await refreshData();
       setTimeout(() => {
         setSelectedRecipe(null);
+        setIsKitchenCookMode(false);
         setCookingMessage(null);
         setIsCookingSuccess(false);
       }, 2500);
@@ -484,6 +563,7 @@ export default function ShikeApp() {
       setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
       if (selectedRecipe && selectedRecipe.id === recipeId) {
         setSelectedRecipe(null);
+        setIsKitchenCookMode(false);
       }
       showToast('已删除该 AI 菜谱');
     } catch (err: any) {
@@ -672,11 +752,16 @@ export default function ShikeApp() {
           <div className="space-y-6">
             <div className="flex items-end justify-between gap-3">
               <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-forest-100/80 dark:bg-forest-900/40 text-forest-800 dark:text-forest-300 text-[11px] font-semibold mb-1.5 border border-forest-200/50 dark:border-forest-800/40">
+                  <span>{mealPeriod.icon}</span>
+                  <span>{mealPeriod.tag}</span>
+                  <span className="text-forest-600/70 dark:text-forest-400/70 text-[10px] tabular-nums">({mealPeriod.timeRange})</span>
+                </div>
                 <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-                  今晚吃什么？
+                  {mealPeriod.title}
                 </h1>
                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                  基于冰箱现有 {inventory.length} 种食材，智能优先消耗临期与高契合度菜谱
+                  {mealPeriod.subtitle}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -703,6 +788,42 @@ export default function ShikeApp() {
               </div>
             </div>
 
+            {/* 灵感流智能场景横滑筛选胶囊 (Contextual Filter Pills) */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+              {[
+                { id: 'all' as const, label: '全部灵感', icon: '✨', count: filterCounts.all },
+                { id: 'quick' as const, label: '15分钟快手', icon: '⚡', count: filterCounts.quick },
+                { id: 'soup' as const, label: '暖胃汤羹', icon: '🍲', count: filterCounts.soup },
+                { id: 'light' as const, label: '减脂轻食', icon: '🥗', count: filterCounts.light },
+                { id: 'urgent' as const, label: '优先赏味', icon: '⏳', count: filterCounts.urgent },
+              ].map((pill) => {
+                const isSelected = recipeFilter === pill.id;
+                return (
+                  <button
+                    key={pill.id}
+                    onClick={() => setRecipeFilter(pill.id)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 active:scale-95 ${
+                      isSelected
+                        ? 'bg-forest-900 text-white shadow-soft dark:bg-forest-700'
+                        : 'bg-white dark:bg-[#1E201D] text-stone-600 dark:text-stone-400 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] hover:bg-stone-50 dark:hover:bg-stone-800/60'
+                    }`}
+                  >
+                    <span>{pill.icon}</span>
+                    <span>{pill.label}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums ${
+                        isSelected
+                          ? 'bg-white/20 text-white'
+                          : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400'
+                      }`}
+                    >
+                      {pill.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* 加载中提示 */}
             {loadingRecipes && recipes.length === 0 && (
               <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
@@ -711,15 +832,45 @@ export default function ShikeApp() {
               </div>
             )}
 
-            {/* 空状态提示 */}
+            {/* 全局空状态提示 (带治愈手绘插画与行动按钮) */}
             {!loadingRecipes && recipes.length === 0 && (
-              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
-                <ChefHat className="w-12 h-12 text-stone-300 dark:text-stone-600 mx-auto mb-3" />
-                <span className="font-semibold text-sm text-stone-700 dark:text-stone-200">暂时没有可推荐的菜谱</span>
-                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
-                  先拍一张冰箱照片或手动录入食材，之后可以点「AI 菜谱」让大厨现场设计
-                </p>
-              </div>
+              <EmotionalEmptyState
+                type="recipes"
+                title="暂时没有可推荐的菜谱"
+                description="先拍一张冰箱照片或手动录入食材，大厨将即刻为你搭配适合的美味灵感！"
+                primaryAction={{
+                  label: '去拍照录入',
+                  icon: <Camera className="w-3.5 h-3.5" />,
+                  onClick: () => {
+                    playShutterSound();
+                    setActiveTab('scan');
+                  },
+                }}
+                secondaryAction={{
+                  label: 'AI 菜谱定制',
+                  icon: <Sparkles className="w-3.5 h-3.5" />,
+                  onClick: handleTriggerAiChef,
+                }}
+              />
+            )}
+
+            {/* 场景筛选结果为空时的治愈空状态插画与微文案 */}
+            {!loadingRecipes && recipes.length > 0 && displayedRecipes.length === 0 && (
+              <EmotionalEmptyState
+                type="filter"
+                title="没有找到该分类的菜谱"
+                description="没有找到该分类的菜谱，看看全部推荐，或点击「AI 菜谱」让大厨现场设计"
+                primaryAction={{
+                  label: 'AI 菜谱',
+                  icon: <Sparkles className="w-3.5 h-3.5" />,
+                  onClick: handleTriggerAiChef,
+                }}
+                secondaryAction={{
+                  label: '查看全部灵感',
+                  icon: <Utensils className="w-3.5 h-3.5" />,
+                  onClick: () => setRecipeFilter('all'),
+                }}
+              />
             )}
 
             {/* 库存有食材、但没有任何固定菜谱匹配得上时，引导用户使用 AI 定制 */}
@@ -744,11 +895,12 @@ export default function ShikeApp() {
 
             {/* Recipe Grid - 杂志大图质感，卡片留白与呼吸感 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recipes.map((recipe) => (
+              {displayedRecipes.map((recipe) => (
                 <div
                   key={recipe.id}
                   onClick={() => {
                     setSelectedRecipe(recipe);
+                    setIsKitchenCookMode(false);
                     setCookingTimer((recipe.cook_time || 5) * 60);
                     setIsTimerRunning(false);
                   }}
@@ -894,7 +1046,10 @@ export default function ShikeApp() {
 
               {!previewUrl ? (
                 <div
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    playShutterSound();
+                    fileInputRef.current?.click();
+                  }}
                   className="border-2 border-dashed border-stone-200 dark:border-stone-700/80 hover:border-forest-600/70 rounded-2xl p-9 cursor-pointer transition-all bg-stone-50/50 dark:bg-stone-800/20 hover:bg-forest-50/30 dark:hover:bg-forest-950/20 flex flex-col items-center justify-center gap-3.5 group"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-forest-50 dark:bg-forest-900/40 text-forest-700 dark:text-forest-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
@@ -1073,19 +1228,40 @@ export default function ShikeApp() {
                 <div className="w-8 h-8 border-2 border-forest-200 border-t-forest-600 rounded-full animate-spin mx-auto mb-3" />
                 <span className="font-medium text-sm text-stone-700 dark:text-stone-200">正在读取冰箱库存…</span>
               </div>
+            ) : inventory.length === 0 ? (
+              <EmotionalEmptyState
+                type="fridge"
+                title="当前冰箱暂无食材"
+                description="冰箱空空如也，生活正在等待被新鲜填满。拍一张冰箱照片即可快速全景智能录入！"
+                primaryAction={{
+                  label: '去拍照录入',
+                  icon: <Camera className="w-3.5 h-3.5" />,
+                  onClick: () => {
+                    playShutterSound();
+                    setActiveTab('scan');
+                  },
+                }}
+                secondaryAction={{
+                  label: '手动快速录入',
+                  icon: <Plus className="w-3.5 h-3.5" />,
+                  onClick: () => setShowAddModal(true),
+                }}
+              />
             ) : filteredInventory.length === 0 ? (
-              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
-                <Refrigerator className="w-12 h-12 text-stone-300 dark:text-stone-600 mx-auto mb-3" />
-                <span className="font-semibold text-sm text-stone-700 dark:text-stone-200">当前冰箱暂无食材</span>
-                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">拍一张冰箱照片即可快速全景录入！</p>
-                <button
-                  onClick={() => setActiveTab('scan')}
-                  className="mt-4 px-4 py-2 rounded-full bg-forest-800 hover:bg-forest-900 text-white text-xs font-medium inline-flex items-center gap-1.5 shadow-soft transition-all"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>去拍照录入</span>
-                </button>
-              </div>
+              <EmotionalEmptyState
+                type="fridge"
+                title="该储物区暂无食材"
+                description="当前分区整洁清爽，也可以点击切换查看全部食材或录入新食材。"
+                primaryAction={{
+                  label: '查看全部食材',
+                  onClick: () => setSelectedLocation('all'),
+                }}
+                secondaryAction={{
+                  label: '录入新食材',
+                  icon: <Plus className="w-3.5 h-3.5" />,
+                  onClick: () => setShowAddModal(true),
+                }}
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredInventory.map((item) => {
@@ -1207,8 +1383,27 @@ export default function ShikeApp() {
         </footer>
       </main>
 
+      {/* 灶台大字专注下厨模式 (Kitchen Cook Mode 全屏大字专注台) */}
+      {selectedRecipe && isKitchenCookMode && (
+        <KitchenCookMode
+          recipe={selectedRecipe}
+          onExit={() => setIsKitchenCookMode(false)}
+          onClose={() => {
+            setSelectedRecipe(null);
+            setIsKitchenCookMode(false);
+          }}
+          cookingTimer={cookingTimer}
+          setCookingTimer={setCookingTimer}
+          isTimerRunning={isTimerRunning}
+          setIsTimerRunning={setIsTimerRunning}
+          onCook={handleCook}
+          isCookingSuccess={isCookingSuccess}
+          cookingMessage={cookingMessage}
+        />
+      )}
+
       {/* COOKING WALKTHROUGH DRAWER / MODAL */}
-      {selectedRecipe && (
+      {selectedRecipe && !isKitchenCookMode && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
           <div className="w-full max-w-2xl bg-white dark:bg-[#1E201D] rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-modal border border-[#1C1D1B]/[0.08] dark:border-white/[0.08]">
             {/* Modal Header */}
@@ -1226,12 +1421,27 @@ export default function ShikeApp() {
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/30 pointer-events-none" />
-              <button
-                onClick={() => setSelectedRecipe(null)}
-                className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-black/50 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md hover:bg-black/75 transition-all shadow-sm border border-white/10"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="absolute top-3.5 right-3.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsKitchenCookMode(true)}
+                  className="px-2.5 py-1.5 rounded-full bg-black/50 hover:bg-forest-800 text-white/95 flex items-center gap-1.5 backdrop-blur-md transition-all shadow-sm border border-white/10 text-xs font-medium"
+                  title="进入灶台大字专注下厨模式"
+                >
+                  <Maximize2 className="w-3.5 h-3.5 text-caramel-300" />
+                  <span className="hidden sm:inline">灶台大字模式</span>
+                  <span className="sm:hidden">大字</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedRecipe(null);
+                    setIsKitchenCookMode(false);
+                  }}
+                  className="w-8 h-8 rounded-full bg-black/50 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md hover:bg-black/75 transition-all shadow-sm border border-white/10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
               <div className="absolute bottom-4 left-5 right-5 text-white">
                 <div className="flex items-center gap-2">
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-forest-700/90 backdrop-blur-sm font-medium border border-white/10">
