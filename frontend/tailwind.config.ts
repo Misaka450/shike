@@ -61,6 +61,11 @@ const config: Config = {
           900: "#662F1F",
         },
       },
+      transitionTimingFunction: {
+        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "spring-soft": "cubic-bezier(0.25, 1.25, 0.5, 1)",
+        "smooth-out": "cubic-bezier(0.16, 1, 0.3, 1)",
+      },
     },
   },
   plugins: [],

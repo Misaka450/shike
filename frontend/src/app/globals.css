@@ -17,6 +17,11 @@
   --accent-caramel: #C86D2C;
   --accent-caramel-warm: #D97706;
   --accent-caramel-light: #FDF5ED;
+
+  /* 全局弹簧物理过渡曲线 (Spring Physics) */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring-soft: cubic-bezier(0.25, 1.25, 0.5, 1);
+  --ease-out-smooth: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,6 +50,24 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.011em;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* 纯 CSS 微有机纸质肌理 (Subtle Linen/Paper Grain Texture)
+   赋予暖燕麦米白底色如高级实体食谱书般的温润纸张触感 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
 }
 
 /* 柔和微弥散环境光阴影体系 */
@@ -180,4 +203,35 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* 全局交互弹簧自然过渡 (Spring Physics Micro-interactions) */
+.transition-spring {
+  transition-timing-function: var(--ease-spring);
+}
+
+.transition-spring-soft {
+  transition-timing-function: var(--ease-spring-soft);
+}
+
+/* 按钮点击触感微弹性回弹 */
+.pressable-spring {
+  transition: transform 0.22s var(--ease-spring), box-shadow 0.22s ease;
+}
+
+.pressable-spring:active {
+  transform: scale(0.96);
+}
+
+/* 卡片弹簧质感悬浮 */
+.card-spring-hover {
+  transition: transform 0.35s var(--ease-spring-soft), box-shadow 0.35s ease;
+}
+
+.card-spring-hover:hover {
+  transform: translateY(-3px) scale(1.008);
+}
+
+.card-spring-hover:active {
+  transform: scale(0.985);
 }

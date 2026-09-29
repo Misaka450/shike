@@ -630,8 +630,14 @@ export default function ShikeApp() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="max-w-6xl mx-auto px-4 lg:px-8 pt-5">
+      {/* Main Content Area - 模态框打开时的单反景深虚化 (Depth-of-Field Blur) */}
+      <main
+        className={`max-w-6xl mx-auto px-4 lg:px-8 pt-5 transition-all duration-300 ${
+          selectedRecipe || showAddModal || showAuthModal
+            ? 'scale-[0.985] blur-[2px] opacity-90 pointer-events-none select-none'
+            : ''
+        }`}
+      >
         {/* Urgent Expiring Alert Banner (Global) - 优雅的天然赏味期卡片 */}
         {summary.yellow_warning > 0 && (
           <div
@@ -689,7 +695,7 @@ export default function ShikeApp() {
                   onClick={handleTriggerAiChef}
                   disabled={isAiGenerating}
                   title={`根据冰箱现有食材，让 AI 大厨现场设计 ${AI_RECIPE_COUNT} 道菜谱`}
-                  className="group btn-shimmer-caramel flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-caramel-500 via-caramel-600 to-caramel-500 bg-[length:200%_auto] hover:bg-right hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 text-white text-xs font-medium shadow-ambient-caramel transition-all duration-300 active:scale-95"
+                  className="group btn-shimmer-caramel flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-caramel-500 via-caramel-600 to-caramel-500 bg-[length:200%_auto] hover:bg-right hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 text-white text-xs font-medium shadow-ambient-caramel transition-all duration-300 ease-spring active:scale-95"
                 >
                   <Sparkles className={`w-3.5 h-3.5 text-amber-200 transition-transform duration-300 ${isAiGenerating ? 'animate-spin' : 'group-hover:rotate-12 group-hover:scale-110 group-active:-rotate-12'}`} />
                   <span className="relative z-10">{isAiGenerating ? '生成中…' : 'AI 菜谱'}</span>
@@ -746,64 +752,78 @@ export default function ShikeApp() {
                     setCookingTimer((recipe.cook_time || 5) * 60);
                     setIsTimerRunning(false);
                   }}
-                  className="group bg-white dark:bg-[#1E201D] rounded-3xl p-4 sm:p-5 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer flex flex-col justify-between"
+                  className="group bg-white dark:bg-[#1E201D] rounded-3xl p-4 sm:p-5 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card hover:shadow-card-hover transition-all duration-300 ease-spring-soft hover:-translate-y-1 active:scale-[0.985] cursor-pointer flex flex-col justify-between"
                 >
                   <div>
-                    {/* Visual & Badges */}
-                    <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-800 mb-4">
-                      <img
-                        src={recipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
-                        alt={recipe.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                        loading="lazy"
-                        onError={(e: any) => {
-                          if (!e.target.src.endsWith('/images/dishes/recipe_tomato_egg.webp')) {
-                            e.target.src = '/images/dishes/recipe_tomato_egg.webp';
-                          }
-                        }}
-                      />
-                      {/* 渐变遮罩增强文字清晰度 */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
-
-                      {/* Match Rate Pill - 高级毛玻璃徽章 */}
-                      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#1C1D1B]/75 backdrop-blur-md text-white text-[11px] font-medium flex items-center gap-1.5 border border-white/10 shadow-sm">
-                        <Sparkles className="w-3 h-3 text-caramel-300" />
-                        <span>匹配率 {Math.round((recipe.match_rate || 0.8) * 100)}%</span>
+                    {/* Visual & Badges with Ambient Color Glow */}
+                    <div className="relative mb-4">
+                      {/* 菜品封面环境氛围背光 (Ambient Color Glow) - 投射大半径高斯模糊漫射光 */}
+                      <div className="absolute -inset-1.5 rounded-2xl overflow-hidden pointer-events-none blur-xl opacity-25 group-hover:opacity-45 transition-opacity duration-500">
+                        <img
+                          src={recipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
+                          alt=""
+                          aria-hidden="true"
+                          tabIndex={-1}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover scale-110"
+                        />
                       </div>
 
-                      {/* AI 生成专属徽章 / 赏味优先徽章 */}
-                      {recipe.id.startsWith('ai-recipe-') ? (
-                        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                          <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-caramel-500 to-caramel-600 text-white text-[10px] font-medium flex items-center gap-1 shadow-sm">
-                            <Sparkles className="w-2.5 h-2.5" />
-                            <span>AI 定制</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteRecipe(recipe.id, e)}
-                            title="删除 AI 菜谱"
-                            className="w-6 h-6 rounded-full bg-black/45 hover:bg-rose-500 text-white/90 hover:text-white backdrop-blur-md transition-all shadow-sm flex items-center justify-center hover:scale-105 active:scale-95 border border-white/10"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        recipe.urgency_boost > 0 && (
-                          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-caramel-500 text-white text-[10px] font-medium backdrop-blur-sm shadow-sm">
-                            赏味优先
-                          </div>
-                        )
-                      )}
+                      <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-800">
+                        <img
+                          src={recipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
+                          alt={recipe.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                          loading="lazy"
+                          onError={(e: any) => {
+                            if (!e.target.src.endsWith('/images/dishes/recipe_tomato_egg.webp')) {
+                              e.target.src = '/images/dishes/recipe_tomato_egg.webp';
+                            }
+                          }}
+                        />
+                        {/* 渐变遮罩增强文字清晰度 */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
 
-                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] text-white/95 font-medium">
-                        <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
-                          {recipe.difficulty}
-                        </span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1 border border-white/10">
-                          <Clock className="w-3 h-3" />
-                          <span>{recipe.cook_time}分钟</span>
-                        </span>
+                        {/* Match Rate Pill - 高级毛玻璃徽章 */}
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#1C1D1B]/75 backdrop-blur-md text-white text-[11px] font-medium flex items-center gap-1.5 border border-white/10 shadow-sm">
+                          <Sparkles className="w-3 h-3 text-caramel-300" />
+                          <span>匹配率 {Math.round((recipe.match_rate || 0.8) * 100)}%</span>
+                        </div>
+
+                        {/* AI 生成专属徽章 / 赏味优先徽章 */}
+                        {recipe.id.startsWith('ai-recipe-') ? (
+                          <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-caramel-500 to-caramel-600 text-white text-[10px] font-medium flex items-center gap-1 shadow-sm">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>AI 定制</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteRecipe(recipe.id, e)}
+                              title="删除 AI 菜谱"
+                              className="w-6 h-6 rounded-full bg-black/45 hover:bg-rose-500 text-white/90 hover:text-white backdrop-blur-md transition-all shadow-sm flex items-center justify-center hover:scale-105 active:scale-95 border border-white/10"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          recipe.urgency_boost > 0 && (
+                            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-caramel-500 text-white text-[10px] font-medium backdrop-blur-sm shadow-sm">
+                              赏味优先
+                            </div>
+                          )
+                        )}
+
+                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] text-white/95 font-medium">
+                          <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                            {recipe.difficulty}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1 border border-white/10">
+                            <Clock className="w-3 h-3" />
+                            <span>{recipe.cook_time}分钟</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -814,23 +834,23 @@ export default function ShikeApp() {
                       {recipe.tips || '经典家常下饭美味，主辅料契合度极佳。'}
                     </p>
 
-                    {/* Matched Ingredients Chips - 温润自然标签 */}
+                    {/* Matched Ingredients Chips - 温润自然标签，带食材微标签压印质感 */}
                     <div className="mt-3.5 flex flex-wrap gap-1.5">
                       {recipe.matched_ingredients && recipe.matched_ingredients.length > 0 ? (
                         recipe.matched_ingredients.map((m, idx) => (
                           <span
                             key={idx}
-                            className={`text-[10px] px-2.5 py-0.5 rounded-lg font-medium transition-colors ${
+                            className={`text-[10px] px-2.5 py-0.5 rounded-lg font-medium transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border ${
                               m.urgency_level === 'yellow' || m.urgency_level === 'red'
-                                ? 'bg-caramel-50 dark:bg-caramel-900/30 text-caramel-700 dark:text-caramel-300 border border-caramel-200/60 dark:border-caramel-800/40'
-                                : 'bg-forest-50 dark:bg-forest-950/60 text-forest-700 dark:text-forest-300 border border-forest-200/60 dark:border-forest-800/40'
+                                ? 'bg-caramel-50 dark:bg-caramel-900/30 text-caramel-700 dark:text-caramel-300 border-caramel-200/80 dark:border-caramel-800/60'
+                                : 'bg-forest-50 dark:bg-forest-950/60 text-forest-700 dark:text-forest-300 border-forest-200/80 dark:border-forest-800/60'
                             }`}
                           >
                             ✓ {m.recipe_ingredient}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-500">
+                        <span className="text-[10px] px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] border border-black/[0.04] dark:border-white/[0.06]">
                           需备常见调料
                         </span>
                       )}
@@ -1251,7 +1271,7 @@ export default function ShikeApp() {
                   {selectedRecipe.ingredients.map((ing, idx) => (
                     <div
                       key={idx}
-                      className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/50 dark:border-stone-700/50 flex items-center justify-between text-xs"
+                      className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-black/[0.04] dark:border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] flex items-center justify-between text-xs transition-all hover:bg-stone-100/70 dark:hover:bg-stone-800/70"
                     >
                       <span className="font-medium text-stone-800 dark:text-stone-200">{ing.name}</span>
                       <span className="text-stone-400 dark:text-stone-500 tabular-nums">{ing.amount}</span>
