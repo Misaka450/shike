@@ -68,6 +68,7 @@ import { getMealPeriod, MealPeriodInfo } from '@/lib/mealPeriod';
 import { playTimerDoneSound, playCookSuccessSound, playShutterSound } from '@/lib/sound';
 import EmotionalEmptyState from '@/components/EmotionalEmptyState';
 import KitchenCookMode from '@/components/KitchenCookMode';
+import FridgeStorageMap, { StorageZoneId, STORAGE_ZONES } from '@/components/FridgeStorageMap';
 import InventoryCard from '@/components/InventoryCard';
 
 /** 点击「AI 菜谱」按钮时一次生成的菜谱数量 */
@@ -84,7 +85,7 @@ export default function ShikeApp() {
     yellow_warning: 0,
     green_safe: 0,
   });
-  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [selectedZone, setSelectedZone] = useState<StorageZoneId>('all');
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [swipedCardId, setSwipedCardId] = useState<number | null>(null);
 
@@ -678,13 +679,12 @@ export default function ShikeApp() {
     }
   };
 
-  // Filter Inventory
+  // Filter Inventory by Storage Zone
   const filteredInventory = inventory.filter((item) => {
-    if (selectedLocation === 'all') return true;
-    if (selectedLocation === 'fridge') return item.storage_location.includes('冷藏');
-    if (selectedLocation === 'freezer') return item.storage_location.includes('冷冻');
-    if (selectedLocation === 'pantry') return !item.storage_location.includes('冷');
-    return true;
+    if (selectedZone === 'all') return true;
+    const targetZone = STORAGE_ZONES.find((z) => z.id === selectedZone);
+    if (!targetZone) return true;
+    return targetZone.match(item);
   });
 
   return (
@@ -830,7 +830,7 @@ export default function ShikeApp() {
           <div
             onClick={() => {
               setActiveTab('inventory');
-              setSelectedLocation('all');
+              setSelectedZone('all');
             }}
             className="mb-6 p-4 rounded-2xl bg-caramel-50/70 dark:bg-caramel-900/20 border border-caramel-200/60 dark:border-caramel-800/40 flex items-center justify-between cursor-pointer hover:bg-caramel-100/60 dark:hover:bg-caramel-900/30 transition-all shadow-soft group"
           >
@@ -1513,20 +1513,31 @@ export default function ShikeApp() {
               </button>
             </div>
 
-            {/* Segmented Location Filter */}
+            {/* 冰箱物理分层收纳地图 (Interactive Storage Twin) */}
+            {inventory.length > 0 && (
+              <FridgeStorageMap
+                items={inventory}
+                selectedZone={selectedZone}
+                onSelectZone={setSelectedZone}
+              />
+            )}
+
+            {/* Segmented Location Filter - 快捷胶囊协同 */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {[
-                { id: 'all', label: `全部 (${inventory.length})` },
-                { id: 'fridge', label: '冷藏室' },
-                { id: 'freezer', label: '冷冻室' },
-                { id: 'pantry', label: '常温储物' },
+                { id: 'all' as StorageZoneId, label: `全部 (${inventory.length})` },
+                { id: 'cold_main' as StorageZoneId, label: '冷藏主室' },
+                { id: 'cold_drawer' as StorageZoneId, label: '果蔬保鲜抽屉' },
+                { id: 'door_shelf' as StorageZoneId, label: '门侧置物架' },
+                { id: 'freezer' as StorageZoneId, label: '深冷速冻室' },
+                { id: 'pantry' as StorageZoneId, label: '常温干燥架' },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setSelectedLocation(tab.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    selectedLocation === tab.id
-                      ? 'bg-forest-900 dark:bg-forest-700 text-white shadow-soft'
+                  onClick={() => setSelectedZone(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 ${
+                    selectedZone === tab.id
+                      ? 'bg-forest-900 dark:bg-forest-700 text-white shadow-soft font-semibold'
                       : 'bg-white dark:bg-[#1E201D] text-stone-600 dark:text-stone-400 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] hover:bg-stone-50 dark:hover:bg-stone-800/60'
                   }`}
                 >
@@ -1567,7 +1578,7 @@ export default function ShikeApp() {
                 description="当前分区整洁清爽，也可以点击切换查看全部食材或录入新食材。"
                 primaryAction={{
                   label: '查看全部食材',
-                  onClick: () => setSelectedLocation('all'),
+                  onClick: () => setSelectedZone('all'),
                 }}
                 secondaryAction={{
                   label: '录入新食材',
