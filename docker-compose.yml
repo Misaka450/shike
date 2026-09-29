@@ -8,7 +8,9 @@ services:
     ports:
       - "127.0.0.1:8081:8081"
     environment:
+      - TZ=Asia/Shanghai
       - PORT=8081
+      - NODE_OPTIONS=--max-old-space-size=384
       - CPA_URL=http://cli-proxy-api:5201/v1
       - CPA_API_KEY=${CPA_API_KEY}
       - DB_PATH=/opt/shike-ai/data/db/shike.db
@@ -52,7 +54,9 @@ services:
     ports:
       - "127.0.0.1:3002:3000"
     environment:
+      - TZ=Asia/Shanghai
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=384
       - PORT=3000
       # 【关键修复 SEC-03】容器内访问后端必须使用 Docker 服务名，不能用 127.0.0.1
       - API_INTERNAL_URL=http://shike-api:8081

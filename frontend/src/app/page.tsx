@@ -69,6 +69,7 @@ export default function ShikeApp() {
   // Recommendations State
   const [recipes, setRecipes] = useState<RecipeRecommendation[]>([]);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeRecommendation | null>(null);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
@@ -146,6 +147,7 @@ export default function ShikeApp() {
   const [cookingTimer, setCookingTimer] = useState<number>(120);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [cookingMessage, setCookingMessage] = useState<string | null>(null);
+  const [isCookingSuccess, setIsCookingSuccess] = useState<boolean>(false);
 
   // Toast / Feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -192,6 +194,17 @@ export default function ShikeApp() {
   useEffect(() => {
     refreshData();
   }, []);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refreshData();
+      showToast('推荐已更新');
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
 
   // 灶台倒计时
   // 【性能优化 PER-06】只在开始/暂停时建立定时器，剩余秒数由「截止时间戳」推算。
@@ -443,15 +456,18 @@ export default function ShikeApp() {
   const handleCook = async (recipe: RecipeRecommendation) => {
     try {
       await cookRecipe(recipe.id, true);
+      setIsCookingSuccess(true);
       setCookingMessage(`🎉 成功烹饪「${recipe.name}」，已自动扣减在库消耗食材！`);
       showToast(`已扣减「${recipe.name}」所用食材`);
       await refreshData();
       setTimeout(() => {
         setSelectedRecipe(null);
         setCookingMessage(null);
+        setIsCookingSuccess(false);
       }, 2500);
     } catch (err: any) {
       showToast(err.message || '扣库失败');
+      setIsCookingSuccess(false);
     }
   };
 
@@ -485,43 +501,44 @@ export default function ShikeApp() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] pb-24 lg:pb-12 antialiased selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="min-h-screen bg-[#FAFAF7] dark:bg-[#141514] text-[#1C1D1B] dark:text-[#EDEDE8] pb-24 lg:pb-12 antialiased selection:bg-[#EBF3EE] selection:text-[#1B382B]">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-slate-900/90 backdrop-blur-md text-white text-sm font-medium shadow-lg transition-all animate-bounce">
-          {toastMessage}
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-[#1C1D1B]/95 dark:bg-[#EDEDE8]/95 backdrop-blur-md text-[#FAFAF7] dark:text-[#141514] text-xs sm:text-sm font-medium shadow-modal transition-all animate-bounce flex items-center gap-2 border border-white/10">
+          <Sparkles className="w-3.5 h-3.5 text-caramel-400" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-4 lg:px-8 py-2.5 sm:py-3.5">
+      <header className="sticky top-0 z-40 bg-[#FAFAF7]/85 dark:bg-[#141514]/85 backdrop-blur-md border-b border-[#1C1D1B]/[0.06] dark:border-white/[0.08] px-3.5 sm:px-4 lg:px-8 py-2.5 sm:py-3.5 transition-colors">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <img
               src="/images/logo.webp"
               alt="食刻 AI Logo"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover shadow-sm border border-slate-200/60 shrink-0"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl object-cover shadow-soft border border-[#1C1D1B]/[0.08] shrink-0"
             />
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-bold text-sm sm:text-base tracking-tight text-slate-900">食刻 AI</span>
-                <span className="text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <span className="font-bold text-sm sm:text-base tracking-tight text-[#1C1D1B] dark:text-[#EDEDE8]">食刻 AI</span>
+                <span className="text-[10px] sm:text-[11px] font-medium px-2 py-0.5 rounded-full bg-forest-50 dark:bg-forest-950/80 text-forest-700 dark:text-forest-300 border border-forest-200/60 dark:border-forest-800/60">
                   智能冰箱管家
                 </span>
               </div>
-              <p className="text-xs text-slate-500 hidden sm:block">拍一拍冰箱，今天吃什么交给 AI</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400 hidden sm:block">拍一拍冰箱，今天吃什么交给 AI</p>
             </div>
           </div>
 
           {/* KPI Capsule & Action */}
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-xs font-medium text-slate-600">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100/80 dark:bg-stone-800/60 text-xs font-medium text-stone-600 dark:text-stone-300 border border-stone-200/50 dark:border-stone-700/50">
+              <span className="w-2 h-2 rounded-full bg-forest-600"></span>
               <span>在库 {summary.total} 种</span>
               {summary.yellow_warning > 0 && (
                 <>
-                  <span className="text-slate-300">·</span>
-                  <span className="text-amber-600 font-semibold">{summary.yellow_warning} 临期急需</span>
+                  <span className="text-stone-300 dark:text-stone-600">·</span>
+                  <span className="text-caramel-600 dark:text-caramel-400 font-medium">{summary.yellow_warning} 赏味提醒</span>
                 </>
               )}
             </div>
@@ -529,16 +546,16 @@ export default function ShikeApp() {
             <button
               onClick={handleTriggerAiChef}
               disabled={isAiGenerating}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-xs font-semibold shadow-sm shadow-amber-500/10 transition-all active:scale-95"
+              className="group btn-shimmer-caramel flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-caramel-500 via-caramel-600 to-caramel-500 bg-[length:200%_auto] hover:bg-right hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 text-white text-xs font-medium shadow-ambient-caramel transition-all duration-300 active:scale-95"
               title={`根据冰箱现有食材，让 AI 大厨现场设计 ${AI_RECIPE_COUNT} 道菜谱`}
             >
-              <Sparkles className={`w-3.5 h-3.5 ${isAiGenerating ? 'animate-spin' : ''}`} />
-              <span>{isAiGenerating ? '生成中…' : 'AI 菜谱'}</span>
+              <Sparkles className={`w-3.5 h-3.5 text-amber-200 transition-transform duration-300 ${isAiGenerating ? 'animate-spin' : 'group-hover:rotate-12 group-hover:scale-110 group-active:-rotate-12'}`} />
+              <span className="relative z-10">{isAiGenerating ? '定制中…' : 'AI 菜谱'}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('scan')}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-forest-800 hover:bg-forest-900 text-white text-xs font-medium shadow-soft transition-all active:scale-95"
             >
               <Camera className="w-3.5 h-3.5" />
               <span>拍冰箱入库</span>
@@ -551,20 +568,23 @@ export default function ShikeApp() {
                   setAuthMode('login');
                   setShowAuthModal(true);
                 }}
-                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all active:scale-95 border border-slate-200"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100/90 dark:bg-stone-800/80 hover:bg-stone-200/80 text-stone-700 dark:text-stone-200 text-xs font-medium transition-all active:scale-95 border border-stone-200/60 dark:border-stone-700/60"
                 title="登录后可跨电脑、手机实时同步冰箱数据"
               >
-                <User className="w-3.5 h-3.5 text-slate-500" />
+                <User className="w-3.5 h-3.5 text-stone-500" />
                 <span className="sm:hidden">登录</span>
-                <span className="hidden sm:inline">登录 / 多端同步</span>
+                <span className="hidden sm:inline">登录 / 同步</span>
               </button>
             ) : (
-              <div className="flex items-center gap-1 sm:gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 sm:px-2.5 py-1 rounded-full text-xs font-medium">
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shrink-0"></span>
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-forest-50/90 dark:bg-forest-950/80 text-forest-800 dark:text-forest-200 border border-forest-200/70 dark:border-forest-800/70 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium shadow-xs">
+                <span className="relative flex h-2 w-2 shrink-0 items-center justify-center" title="数据多端实时同步中">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-forest-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-forest-600 dark:bg-forest-400" />
+                </span>
                 <span className="truncate max-w-[70px] sm:max-w-none">{userProfile.nickname || userProfile.username}</span>
                 <button
                   onClick={handleLogout}
-                  className="ml-0.5 sm:ml-1 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+                  className="ml-1 text-stone-400 hover:text-rose-500 transition-colors shrink-0"
                   title="退出登录"
                 >
                   <LogOut className="w-3 h-3" />
@@ -575,33 +595,33 @@ export default function ShikeApp() {
         </div>
 
         {/* Desktop Navigation Tabs */}
-        <div className="max-w-6xl mx-auto hidden lg:flex items-center gap-2 pt-3">
+        <div className="max-w-6xl mx-auto hidden lg:flex items-center gap-1.5 pt-3">
           <button
             onClick={() => setActiveTab('recipes')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'recipes'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-forest-900 text-white shadow-soft dark:bg-forest-700'
+                : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100/80 dark:hover:bg-stone-800/60'
             }`}
           >
             今日灵感推荐 ({recipes.length})
           </button>
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'inventory'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-forest-900 text-white shadow-soft dark:bg-forest-700'
+                : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100/80 dark:hover:bg-stone-800/60'
             }`}
           >
             智能冰箱库存 ({inventory.length})
           </button>
           <button
             onClick={() => setActiveTab('scan')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'scan'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-forest-900 text-white shadow-soft dark:bg-forest-700'
+                : 'text-stone-600 dark:text-stone-400 hover:bg-stone-100/80 dark:hover:bg-stone-800/60'
             }`}
           >
             拍照全景识图
@@ -611,28 +631,30 @@ export default function ShikeApp() {
 
       {/* Main Content Area */}
       <main className="max-w-6xl mx-auto px-4 lg:px-8 pt-5">
-        {/* Urgent Expiring Alert Banner (Global) */}
+        {/* Urgent Expiring Alert Banner (Global) - 优雅的天然赏味期卡片 */}
         {summary.yellow_warning > 0 && (
           <div
             onClick={() => {
               setActiveTab('inventory');
               setSelectedLocation('all');
             }}
-            className="mb-5 p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-center justify-between cursor-pointer hover:bg-amber-100/70 transition-all"
+            className="mb-6 p-4 rounded-2xl bg-caramel-50/70 dark:bg-caramel-900/20 border border-caramel-200/60 dark:border-caramel-800/40 flex items-center justify-between cursor-pointer hover:bg-caramel-100/60 dark:hover:bg-caramel-900/30 transition-all shadow-soft group"
           >
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-xl bg-caramel-100 dark:bg-caramel-800/50 flex items-center justify-center text-caramel-600 dark:text-caramel-300 shrink-0 shadow-xs">
                 <AlertTriangle className="w-4 h-4" />
               </span>
               <div>
-                <span className="font-semibold text-xs text-amber-900">
-                  有 {summary.yellow_warning} 种食材即将到期建议优先吃掉！
+                <span className="font-medium text-xs sm:text-sm text-stone-900 dark:text-stone-100">
+                  有 {summary.yellow_warning} 种食材迎来最佳赏味期，建议优先享用
                 </span>
-                <p className="text-[11px] text-amber-700/80">已在菜谱推荐引擎中获得最高匹配权重</p>
+                <p className="text-[11px] text-caramel-700/80 dark:text-caramel-300/80 mt-0.5">
+                  已在菜谱推荐引擎中获得最高优先契合度
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 text-xs font-medium text-amber-800">
-              <span>立即查看</span>
+            <div className="flex items-center gap-1 text-xs font-medium text-caramel-700 dark:text-caramel-300 shrink-0 group-hover:translate-x-0.5 transition-transform">
+              <span>查看食材</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -643,20 +665,22 @@ export default function ShikeApp() {
           <div className="space-y-6">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
+                <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                   今晚吃什么？
                 </h1>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                   基于冰箱现有 {inventory.length} 种食材，智能优先消耗临期与高契合度菜谱
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
-                  onClick={refreshData}
-                  className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 py-2"
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  title="刷新推荐菜谱"
+                  className="text-xs text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-stone-100 flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-2 rounded-full bg-stone-100/80 hover:bg-stone-200/80 dark:bg-stone-800/60 dark:hover:bg-stone-700/60 border border-stone-200/60 dark:border-stone-700/60 transition-all active:scale-90 shadow-xs"
                 >
-                  <RotateCcw className="w-3 h-3" />
-                  <span className="hidden sm:inline">刷新推荐</span>
+                  <RotateCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-forest-700 dark:text-forest-400' : ''}`} />
+                  <span className="hidden sm:inline">{isRefreshing ? '刷新中…' : '刷新推荐'}</span>
                 </button>
 
                 {/* AI 菜谱按钮：点击后由大厨根据冰箱现有食材现场生成 3 道菜谱 */}
@@ -664,28 +688,28 @@ export default function ShikeApp() {
                   onClick={handleTriggerAiChef}
                   disabled={isAiGenerating}
                   title={`根据冰箱现有食材，让 AI 大厨现场设计 ${AI_RECIPE_COUNT} 道菜谱`}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
+                  className="group btn-shimmer-caramel flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-caramel-500 via-caramel-600 to-caramel-500 bg-[length:200%_auto] hover:bg-right hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 text-white text-xs font-medium shadow-ambient-caramel transition-all duration-300 active:scale-95"
                 >
-                  <Sparkles className={`w-3.5 h-3.5 ${isAiGenerating ? 'animate-spin' : ''}`} />
-                  <span>{isAiGenerating ? '生成中…' : 'AI 菜谱'}</span>
+                  <Sparkles className={`w-3.5 h-3.5 text-amber-200 transition-transform duration-300 ${isAiGenerating ? 'animate-spin' : 'group-hover:rotate-12 group-hover:scale-110 group-active:-rotate-12'}`} />
+                  <span className="relative z-10">{isAiGenerating ? '生成中…' : 'AI 菜谱'}</span>
                 </button>
               </div>
             </div>
 
             {/* 加载中提示 */}
             {loadingRecipes && recipes.length === 0 && (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
-                <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-3" />
-                <span className="font-semibold text-sm text-slate-700">正在为你挑选合适的菜谱…</span>
+              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
+                <div className="w-8 h-8 border-2 border-forest-200 border-t-forest-600 rounded-full animate-spin mx-auto mb-3" />
+                <span className="font-medium text-sm text-stone-700 dark:text-stone-200">正在为你挑选合适的菜谱…</span>
               </div>
             )}
 
             {/* 空状态提示 */}
             {!loadingRecipes && recipes.length === 0 && (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
-                <ChefHat className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <span className="font-semibold text-sm text-slate-700">暂时没有可推荐的菜谱</span>
-                <p className="text-xs text-slate-400 mt-1">
+              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
+                <ChefHat className="w-12 h-12 text-stone-300 dark:text-stone-600 mx-auto mb-3" />
+                <span className="font-semibold text-sm text-stone-700 dark:text-stone-200">暂时没有可推荐的菜谱</span>
+                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
                   先拍一张冰箱照片或手动录入食材，之后可以点「AI 菜谱」让大厨现场设计
                 </p>
               </div>
@@ -696,23 +720,23 @@ export default function ShikeApp() {
               inventory.length > 0 &&
               recipes.length > 0 &&
               recipes.every((r) => r.score === 0) && (
-                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <div className="p-4 rounded-2xl bg-forest-50/80 dark:bg-forest-950/60 border border-forest-200/70 dark:border-forest-800/60 flex items-center gap-3 shadow-soft">
+                  <span className="w-8 h-8 rounded-xl bg-forest-100 dark:bg-forest-900 flex items-center justify-center text-forest-700 dark:text-forest-300 shrink-0">
                     <Sparkles className="w-4 h-4" />
                   </span>
                   <div>
-                    <span className="font-semibold text-xs text-emerald-900">
+                    <span className="font-medium text-xs sm:text-sm text-forest-900 dark:text-forest-200">
                       没有找到契合现有食材的固定菜谱
                     </span>
-                    <p className="text-[11px] text-emerald-700/80">
+                    <p className="text-[11px] text-forest-700/80 dark:text-forest-400 mt-0.5">
                       点击「AI 菜谱」按钮，让大厨按你现有的食材一次设计 {AI_RECIPE_COUNT} 道
                     </p>
                   </div>
                 </div>
               )}
 
-            {/* Recipe Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {/* Recipe Grid - 杂志大图质感，卡片留白与呼吸感 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recipes.map((recipe) => (
                 <div
                   key={recipe.id}
@@ -721,17 +745,16 @@ export default function ShikeApp() {
                     setCookingTimer((recipe.cook_time || 5) * 60);
                     setIsTimerRunning(false);
                   }}
-                  className="group bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+                  className="group bg-white dark:bg-[#1E201D] rounded-3xl p-4 sm:p-5 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer flex flex-col justify-between"
                 >
                   <div>
                     {/* Visual & Badges */}
-                    <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-slate-100 mb-3.5">
+                    <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-800 mb-4">
                       <img
                         src={recipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
                         alt={recipe.name}
                         referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        // 菜谱封面多为外链大图且位于长列表下方，懒加载可显著减少首屏请求数
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                         loading="lazy"
                         onError={(e: any) => {
                           if (!e.target.src.endsWith('/images/dishes/recipe_tomato_egg.webp')) {
@@ -739,16 +762,19 @@ export default function ShikeApp() {
                           }
                         }}
                       />
-                      {/* Match Rate Pill */}
-                      <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                      {/* 渐变遮罩增强文字清晰度 */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+
+                      {/* Match Rate Pill - 高级毛玻璃徽章 */}
+                      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#1C1D1B]/75 backdrop-blur-md text-white text-[11px] font-medium flex items-center gap-1.5 border border-white/10 shadow-sm">
+                        <Sparkles className="w-3 h-3 text-caramel-300" />
                         <span>匹配率 {Math.round((recipe.match_rate || 0.8) * 100)}%</span>
                       </div>
 
-                      {/* AI 生成的菜谱用专属徽章标识；固定菜谱则按需显示"消耗临期" */}
+                      {/* AI 生成专属徽章 / 赏味优先徽章 */}
                       {recipe.id.startsWith('ai-recipe-') ? (
-                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
-                          <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                          <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-caramel-500 to-caramel-600 text-white text-[10px] font-medium flex items-center gap-1 shadow-sm">
                             <Sparkles className="w-2.5 h-2.5" />
                             <span>AI 定制</span>
                           </div>
@@ -756,63 +782,63 @@ export default function ShikeApp() {
                             type="button"
                             onClick={(e) => handleDeleteRecipe(recipe.id, e)}
                             title="删除 AI 菜谱"
-                            className="w-5 h-5 rounded-full bg-black/40 hover:bg-rose-500 text-white/80 hover:text-white backdrop-blur-md transition-all shadow-sm flex items-center justify-center hover:scale-110 active:scale-95"
+                            className="w-6 h-6 rounded-full bg-black/45 hover:bg-rose-500 text-white/90 hover:text-white backdrop-blur-md transition-all shadow-sm flex items-center justify-center hover:scale-105 active:scale-95 border border-white/10"
                           >
-                            <Trash2 className="w-2.5 h-2.5" />
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                       ) : (
                         recipe.urgency_boost > 0 && (
-                          <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
-                            消耗临期
+                          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-caramel-500 text-white text-[10px] font-medium backdrop-blur-sm shadow-sm">
+                            赏味优先
                           </div>
                         )
                       )}
 
-                      <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-[11px] text-white/90 font-medium">
-                        <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm">
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] text-white/95 font-medium">
+                        <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
                           {recipe.difficulty}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1 border border-white/10">
                           <Clock className="w-3 h-3" />
                           <span>{recipe.cook_time}分钟</span>
                         </span>
                       </div>
                     </div>
 
-                    <h3 className="font-bold text-base text-slate-900 group-hover:text-emerald-700 transition-colors">
+                    <h3 className="font-bold text-base text-stone-900 dark:text-stone-100 group-hover:text-forest-700 dark:group-hover:text-forest-400 transition-colors">
                       {recipe.name}
                     </h3>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 line-clamp-2 leading-relaxed">
                       {recipe.tips || '经典家常下饭美味，主辅料契合度极佳。'}
                     </p>
 
-                    {/* Matched Ingredients Chips */}
-                    <div className="mt-3 flex flex-wrap gap-1.5">
+                    {/* Matched Ingredients Chips - 温润自然标签 */}
+                    <div className="mt-3.5 flex flex-wrap gap-1.5">
                       {recipe.matched_ingredients && recipe.matched_ingredients.length > 0 ? (
                         recipe.matched_ingredients.map((m, idx) => (
                           <span
                             key={idx}
-                            className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
+                            className={`text-[10px] px-2.5 py-0.5 rounded-lg font-medium transition-colors ${
                               m.urgency_level === 'yellow' || m.urgency_level === 'red'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                ? 'bg-caramel-50 dark:bg-caramel-900/30 text-caramel-700 dark:text-caramel-300 border border-caramel-200/60 dark:border-caramel-800/40'
+                                : 'bg-forest-50 dark:bg-forest-950/60 text-forest-700 dark:text-forest-300 border border-forest-200/60 dark:border-forest-800/40'
                             }`}
                           >
                             ✓ {m.recipe_ingredient}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">
+                        <span className="text-[10px] px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-500">
                           需备常见调料
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">{recipe.category}</span>
-                    <span className="text-xs font-semibold text-emerald-700 flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                  <div className="mt-5 pt-3.5 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                    <span className="text-[11px] text-stone-400 dark:text-stone-500">{recipe.category}</span>
+                    <span className="text-xs font-medium text-forest-700 dark:text-forest-400 flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
                       <span>查看下厨步骤</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </span>
@@ -827,16 +853,16 @@ export default function ShikeApp() {
         {activeTab === 'scan' && (
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="text-center">
-              <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                 冰箱全景多模态识别
               </h1>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
                 拍一张冰箱整层照片，AI 自动批量提取食材、分类及建议存放周期
               </p>
             </div>
 
             {/* Upload Box */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm text-center">
+            <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-6 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card text-center">
               <input
                 type="file"
                 accept="image/*"
@@ -848,21 +874,21 @@ export default function ShikeApp() {
               {!previewUrl ? (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-200 hover:border-emerald-500/80 rounded-2xl p-8 cursor-pointer transition-all bg-slate-50/50 hover:bg-emerald-50/20 flex flex-col items-center justify-center gap-3"
+                  className="border-2 border-dashed border-stone-200 dark:border-stone-700/80 hover:border-forest-600/70 rounded-2xl p-9 cursor-pointer transition-all bg-stone-50/50 dark:bg-stone-800/20 hover:bg-forest-50/30 dark:hover:bg-forest-950/20 flex flex-col items-center justify-center gap-3.5 group"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-forest-50 dark:bg-forest-900/40 text-forest-700 dark:text-forest-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
                     <UploadCloud className="w-7 h-7" />
                   </div>
                   <div>
-                    <span className="font-semibold text-sm text-slate-800">
+                    <span className="font-semibold text-sm text-stone-800 dark:text-stone-200">
                       点击上传或直接拍照
                     </span>
-                    <p className="text-xs text-slate-400 mt-0.5">支持普通手机实拍照片</p>
+                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">支持普通手机实拍照片</p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100 max-h-[360px] mx-auto border border-slate-200">
+                  <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800 max-h-[360px] mx-auto border border-stone-200/80 dark:border-stone-700">
                     <img src={previewUrl} alt="冰箱预览" className="w-full h-full object-cover" />
                     <button
                       onClick={() => {
@@ -870,7 +896,7 @@ export default function ShikeApp() {
                         setPreviewUrl(null);
                         setScanResult(null);
                       }}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-sm"
+                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition-colors shadow-sm"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -880,7 +906,7 @@ export default function ShikeApp() {
                     <button
                       disabled={isScanning}
                       onClick={handleStartScan}
-                      className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+                      className="w-full py-3.5 rounded-2xl bg-forest-800 hover:bg-forest-900 disabled:opacity-50 text-white font-medium text-sm shadow-soft transition-all flex items-center justify-center gap-2 active:scale-98"
                     >
                       {isScanning ? (
                         <>
@@ -889,7 +915,7 @@ export default function ShikeApp() {
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-4 h-4" />
+                          <Sparkles className="w-4 h-4 text-caramel-300" />
                           <span>开始 AI 智能识别</span>
                         </>
                       )}
@@ -901,13 +927,13 @@ export default function ShikeApp() {
 
             {/* Scan Results Bottom Sheet / Card */}
             {scanResult && (
-              <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-5 sm:p-6 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card space-y-4">
+                <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3.5">
                   <div>
-                    <h3 className="font-bold text-sm text-slate-900">
+                    <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100">
                       已识别到 {scanResult.items.length} 种食材
                     </h3>
-                    <p className="text-[11px] text-slate-500">{scanResult.summary}</p>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">{scanResult.summary}</p>
                   </div>
                   <button
                     onClick={() => {
@@ -918,13 +944,13 @@ export default function ShikeApp() {
                       });
                       setSelectedScanItems(next);
                     }}
-                    className="text-xs text-emerald-700 font-semibold"
+                    className="text-xs text-forest-700 dark:text-forest-400 font-medium hover:underline"
                   >
                     全选/反选
                   </button>
                 </div>
 
-                <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+                <div className="divide-y divide-stone-100 dark:divide-stone-800 max-h-[300px] overflow-y-auto pr-1">
                   {scanResult.items.map((item, idx) => (
                     <div
                       key={idx}
@@ -934,31 +960,31 @@ export default function ShikeApp() {
                           [idx]: !prev[idx],
                         }));
                       }}
-                      className="py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 px-2 rounded-xl transition-colors"
+                      className="py-3 flex items-center justify-between cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/40 px-2.5 rounded-xl transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
                             selectedScanItems[idx]
-                              ? 'bg-emerald-600 border-emerald-600 text-white'
-                              : 'border-slate-300 bg-white'
+                              ? 'bg-forest-700 border-forest-700 text-white'
+                              : 'border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800'
                           }`}
                         >
                           {selectedScanItems[idx] && <Check className="w-3.5 h-3.5" />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-slate-900">{item.name}</span>
-                            <span className="text-[10px] px-1.5 py-[2px] rounded bg-slate-100 text-slate-600">
+                            <span className="font-semibold text-xs sm:text-sm text-stone-900 dark:text-stone-100">{item.name}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
                               {item.category}
                             </span>
                           </div>
-                          <span className="text-[11px] text-slate-400">
-                            {item.storage_location} · 建议 {item.recommended_storage_days} 天内吃完
+                          <span className="text-[11px] text-stone-400 dark:text-stone-500 mt-0.5 block">
+                            {item.storage_location} · 建议 {item.recommended_storage_days} 天内享用
                           </span>
                         </div>
                       </div>
-                      <span className="text-xs font-semibold text-slate-600 tabular-nums">
+                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-300 tabular-nums">
                         {item.estimated_quantity}
                       </span>
                     </div>
@@ -967,7 +993,7 @@ export default function ShikeApp() {
 
                 <button
                   onClick={handleConfirmBatchIngest}
-                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm transition-all"
+                  className="w-full py-3.5 rounded-2xl bg-forest-800 hover:bg-forest-900 text-white font-medium text-sm shadow-soft transition-all active:scale-98"
                 >
                   确认添加入库 (
                   {Object.values(selectedScanItems).filter(Boolean).length} 件)
@@ -979,19 +1005,19 @@ export default function ShikeApp() {
 
         {/* TAB 3: INVENTORY */}
         {activeTab === 'inventory' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div className="flex items-end justify-between">
               <div>
-                <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900">
+                <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                   智能家庭在库看板
                 </h1>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  已按保质期设立三级警戒灯，单手点击即可标记消耗
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  智能赏味期三级温润提醒，单手触达即可标记烹饪消耗
                 </p>
               </div>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-forest-900 dark:bg-forest-700 hover:bg-forest-800 text-white text-xs font-medium shadow-soft transition-all active:scale-95"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>手动录入</span>
@@ -999,7 +1025,7 @@ export default function ShikeApp() {
             </div>
 
             {/* Segmented Location Filter */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {[
                 { id: 'all', label: `全部 (${inventory.length})` },
                 { id: 'fridge', label: '冷藏室' },
@@ -1009,10 +1035,10 @@ export default function ShikeApp() {
                 <button
                   key={tab.id}
                   onClick={() => setSelectedLocation(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
                     selectedLocation === tab.id
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                      ? 'bg-forest-900 dark:bg-forest-700 text-white shadow-soft'
+                      : 'bg-white dark:bg-[#1E201D] text-stone-600 dark:text-stone-400 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] hover:bg-stone-50 dark:hover:bg-stone-800/60'
                   }`}
                 >
                   {tab.label}
@@ -1022,68 +1048,82 @@ export default function ShikeApp() {
 
             {/* Inventory List */}
             {loadingInventory && inventory.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
-                <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-3" />
-                <span className="font-semibold text-sm text-slate-700">正在读取冰箱库存…</span>
+              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
+                <div className="w-8 h-8 border-2 border-forest-200 border-t-forest-600 rounded-full animate-spin mx-auto mb-3" />
+                <span className="font-medium text-sm text-stone-700 dark:text-stone-200">正在读取冰箱库存…</span>
               </div>
             ) : filteredInventory.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80">
-                <Refrigerator className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <span className="font-semibold text-sm text-slate-700">当前冰箱暂无食材</span>
-                <p className="text-xs text-slate-400 mt-1">拍一张冰箱照片即可快速全景录入！</p>
+              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
+                <Refrigerator className="w-12 h-12 text-stone-300 dark:text-stone-600 mx-auto mb-3" />
+                <span className="font-semibold text-sm text-stone-700 dark:text-stone-200">当前冰箱暂无食材</span>
+                <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">拍一张冰箱照片即可快速全景录入！</p>
                 <button
                   onClick={() => setActiveTab('scan')}
-                  className="mt-4 px-4 py-2 rounded-full bg-emerald-600 text-white text-xs font-semibold inline-flex items-center gap-1.5"
+                  className="mt-4 px-4 py-2 rounded-full bg-forest-800 hover:bg-forest-900 text-white text-xs font-medium inline-flex items-center gap-1.5 shadow-soft transition-all"
                 >
                   <Camera className="w-3.5 h-3.5" />
                   <span>去拍照录入</span>
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredInventory.map((item) => {
-                  const isUrgent = item.urgency_level === 'yellow' || item.urgency_level === 'red';
+                  const isRed = item.urgency_level === 'red';
+                  const isYellow = item.urgency_level === 'yellow';
                   return (
                     <div
                       key={item.id}
-                      className={`p-3.5 rounded-2xl bg-white border transition-all flex items-center justify-between ${
-                        isUrgent ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200/80'
+                      className={`p-4 rounded-2xl bg-white dark:bg-[#1E201D] border transition-all duration-200 hover:-translate-y-0.5 flex items-center justify-between shadow-card hover:shadow-card-hover ${
+                        isRed
+                          ? 'border-rose-300/80 dark:border-rose-900/40 bg-rose-50/30 dark:bg-rose-950/20'
+                          : isYellow
+                          ? 'border-caramel-300/80 dark:border-caramel-900/40 bg-caramel-50/30 dark:bg-caramel-950/20'
+                          : 'border-[#1C1D1B]/[0.06] dark:border-white/[0.08]'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3.5">
                         <div
-                          className={`w-2 h-10 rounded-full ${
-                            item.urgency_level === 'red'
-                              ? 'bg-red-500'
-                              : item.urgency_level === 'yellow'
-                              ? 'bg-amber-500'
-                              : 'bg-emerald-500'
+                          className={`w-2 h-10 rounded-full shrink-0 ${
+                            isRed
+                              ? 'bg-rose-500 animate-slow-pulse'
+                              : isYellow
+                              ? 'bg-caramel-500 animate-slow-pulse'
+                              : 'bg-forest-600'
                           }`}
                         />
                         <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-sm text-slate-900">{item.name}</span>
-                            <span className="text-[10px] text-slate-500 px-1.5 py-[2px] bg-slate-100 rounded">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-stone-900 dark:text-stone-100">{item.name}</span>
+                            <span className="text-[10px] text-stone-500 dark:text-stone-400 px-2 py-0.5 bg-stone-100 dark:bg-stone-800 rounded-md">
                               {item.category}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <div className="flex items-center gap-2 text-[11px] text-stone-400 dark:text-stone-500 mt-1">
                             <span>{item.quantity}</span>
                             <span>·</span>
                             <span>{item.storage_location}</span>
                             <span>·</span>
                             <span
-                              className={`font-medium ${
-                                item.urgency_level === 'red'
-                                  ? 'text-red-600'
-                                  : item.urgency_level === 'yellow'
-                                  ? 'text-amber-600'
-                                  : 'text-emerald-600'
+                              className={`font-medium inline-flex items-center gap-1 ${
+                                isRed
+                                  ? 'text-rose-600 dark:text-rose-400'
+                                  : isYellow
+                                  ? 'text-caramel-600 dark:text-caramel-400'
+                                  : 'text-forest-700 dark:text-forest-400'
                               }`}
                             >
-                              {item.days_remaining <= 0
-                                ? '已到期'
-                                : `剩 ${item.days_remaining} 天`}
+                              {(isRed || isYellow) && (
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full inline-block animate-ping ${
+                                    isRed ? 'bg-rose-500' : 'bg-caramel-500'
+                                  }`}
+                                />
+                              )}
+                              <span>
+                                {item.days_remaining <= 0
+                                  ? '已到期'
+                                  : `最佳赏味剩 ${item.days_remaining} 天`}
+                              </span>
                             </span>
                           </div>
                         </div>
@@ -1091,7 +1131,7 @@ export default function ShikeApp() {
 
                       <button
                         onClick={() => handleDeleteItem(item.id, item.name)}
-                        className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1"
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-stone-400 dark:text-stone-500 hover:text-forest-700 dark:hover:text-forest-300 hover:bg-forest-50 dark:hover:bg-forest-950/60 transition-colors flex items-center gap-1 active:scale-95"
                         title="标记吃完"
                       >
                         <Check className="w-4 h-4" />
@@ -1105,15 +1145,15 @@ export default function ShikeApp() {
           </div>
         )}
 
-        {/* FOOTER 致谢区块 (食刻清新自然风) */}
-        <footer className="mt-16 sm:mt-20 pt-8 pb-28 lg:pb-10 border-t border-emerald-100/60 text-center select-none">
+        {/* FOOTER 致谢区块 (食刻温暖自然风) */}
+        <footer className="mt-16 sm:mt-20 pt-8 pb-28 lg:pb-10 border-t border-forest-100/60 dark:border-forest-900/40 text-center select-none">
           {/* 生态胶囊徽章 */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold mb-2.5 shadow-xs">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-forest-50 dark:bg-forest-950/80 text-forest-700 dark:text-forest-300 border border-forest-200/60 dark:border-forest-800/60 text-xs font-medium mb-2.5 shadow-xs">
             <span className="text-xs">🌱</span>
             <span>开源生态致谢</span>
           </div>
 
-          <p className="text-xs text-slate-500 max-w-md mx-auto mb-5 leading-relaxed">
+          <p className="text-xs text-stone-500 dark:text-stone-400 max-w-md mx-auto mb-5 leading-relaxed">
             食刻 AI 的菜谱灵感、量化下厨步骤与经典家常风味建立在开源社区的贡献之上
           </p>
 
@@ -1122,25 +1162,25 @@ export default function ShikeApp() {
               href="https://github.com/Anduin2017/HowToCook"
               target="_blank"
               rel="noopener noreferrer"
-              className="group p-4 rounded-2xl bg-white/90 hover:bg-white border border-slate-200/80 hover:border-emerald-300 shadow-sm hover:shadow-md hover:shadow-emerald-500/5 transition-all duration-200 flex items-center justify-between gap-3 backdrop-blur-sm"
+              className="group p-4 rounded-2xl bg-white/90 dark:bg-[#1E201D] hover:bg-white dark:hover:bg-[#232622] border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] hover:border-forest-400/50 shadow-card hover:shadow-card-hover transition-all duration-300 flex items-center justify-between gap-3 backdrop-blur-sm"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 group-hover:bg-emerald-100/80 transition-all duration-200">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-forest-50 dark:bg-forest-900/40 border border-forest-100 dark:border-forest-800/50 flex items-center justify-center text-forest-700 dark:text-forest-300 shrink-0 group-hover:scale-105 transition-all duration-300">
                   <BookOpen className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                    <h4 className="text-xs font-semibold text-slate-800 group-hover:text-emerald-700 transition-colors truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-forest-600 shrink-0"></span>
+                    <h4 className="text-xs font-semibold text-stone-800 dark:text-stone-200 group-hover:text-forest-700 dark:group-hover:text-forest-400 transition-colors truncate">
                       HowToCook 程序员做饭指南
                     </h4>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5 truncate pl-3">
+                  <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-0.5 truncate pl-3">
                     严谨量化的中餐开源菜谱
                   </p>
                 </div>
               </div>
-              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
+              <ExternalLink className="w-4 h-4 text-stone-400 group-hover:text-forest-600 dark:group-hover:text-forest-400 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
             </a>
           </div>
         </footer>
@@ -1148,10 +1188,10 @@ export default function ShikeApp() {
 
       {/* COOKING WALKTHROUGH DRAWER / MODAL */}
       {selectedRecipe && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+          <div className="w-full max-w-2xl bg-white dark:bg-[#1E201D] rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-modal border border-[#1C1D1B]/[0.08] dark:border-white/[0.08]">
             {/* Modal Header */}
-            <div className="relative aspect-[16/9] sm:aspect-[21/9] bg-slate-100">
+            <div className="relative aspect-[16/9] sm:aspect-[21/9] bg-stone-100 dark:bg-stone-800">
               <img
                 src={selectedRecipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
                 alt={selectedRecipe.name}
@@ -1164,94 +1204,137 @@ export default function ShikeApp() {
                   }
                 }}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/30 pointer-events-none" />
               <button
                 onClick={() => setSelectedRecipe(null)}
-                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-sm"
+                className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-black/50 text-white/90 hover:text-white flex items-center justify-center backdrop-blur-md hover:bg-black/75 transition-all shadow-sm border border-white/10"
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="absolute bottom-3 left-4 right-4 text-white">
+              <div className="absolute bottom-4 left-5 right-5 text-white">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-600 font-semibold">
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-forest-700/90 backdrop-blur-sm font-medium border border-white/10">
                     {selectedRecipe.category}
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm">
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-black/45 backdrop-blur-md border border-white/10">
                     {selectedRecipe.difficulty} · {selectedRecipe.cook_time}分钟
                   </span>
                 </div>
-                <h2 className="text-xl font-bold mt-1">{selectedRecipe.name}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mt-1.5 tracking-tight text-white drop-shadow-sm">
+                  {selectedRecipe.name}
+                </h2>
               </div>
             </div>
 
             {/* Modal Scroll Content */}
-            <div className="p-5 overflow-y-auto space-y-5 flex-1">
+            <div className="p-5 sm:p-7 overflow-y-auto space-y-6 flex-1">
               {/* Toast Feedback inside modal */}
               {cookingMessage && (
-                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-bounce">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <div className="p-3.5 rounded-2xl bg-forest-50 dark:bg-forest-950/80 border border-forest-200/80 dark:border-forest-800 text-forest-800 dark:text-forest-200 text-xs sm:text-sm font-medium flex items-center gap-2.5 shadow-soft animate-bounce">
+                  <CheckCircle2 className="w-4 h-4 text-forest-600 dark:text-forest-400 shrink-0" />
                   <span>{cookingMessage}</span>
                 </div>
               )}
 
               {/* Ingredients Breakdown */}
               <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
-                  食材备料清单
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 tracking-wider">
+                    食材备料清单
+                  </h4>
+                  <span className="text-[11px] text-stone-400 dark:text-stone-500">
+                    共 {selectedRecipe.ingredients.length} 样
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {selectedRecipe.ingredients.map((ing, idx) => (
                     <div
                       key={idx}
-                      className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs"
+                      className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/50 dark:border-stone-700/50 flex items-center justify-between text-xs"
                     >
-                      <span className="font-semibold text-slate-800">{ing.name}</span>
-                      <span className="text-slate-400">{ing.amount}</span>
+                      <span className="font-medium text-stone-800 dark:text-stone-200">{ing.name}</span>
+                      <span className="text-stone-400 dark:text-stone-500 tabular-nums">{ing.amount}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Step By Step Instructions */}
+              {/* Step By Step Instructions - 舒展行距与大字号，便于厨房远距离扫读 */}
               <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                <h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 tracking-wider mb-3">
                   分步烹饪指南 (适合厨房扫读)
                 </h4>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {selectedRecipe.instructions.map((step, idx) => (
-                    <div key={idx} className="flex gap-3 items-start">
-                      <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    <div key={idx} className="flex gap-3.5 items-start p-3 rounded-2xl bg-stone-50/60 dark:bg-stone-800/30 border border-stone-200/40 dark:border-stone-800/40">
+                      <span className="w-6 h-6 rounded-full bg-forest-100 dark:bg-forest-900/60 text-forest-800 dark:text-forest-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                         {idx + 1}
                       </span>
-                      <p className="text-sm text-slate-800 leading-relaxed font-medium">{step}</p>
+                      <p className="text-sm sm:text-base text-stone-800 dark:text-stone-200 leading-relaxed font-normal">
+                        {step}
+                      </p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Kitchen Timer Widget */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+              {/* Kitchen Timer Widget - 温暖质感灶台计时器 */}
+              <div
+                className={`p-4 sm:p-5 rounded-2xl transition-all duration-300 flex items-center justify-between shadow-soft border ${
+                  cookingTimer === 0
+                    ? 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 animate-zero-alarm'
+                    : 'bg-caramel-50/60 dark:bg-caramel-950/30 border-caramel-200/60 dark:border-caramel-800/40'
+                }`}
+              >
                 <div>
-                  <span className="text-[11px] text-slate-500 font-semibold">灶台倒计时助手</span>
-                  <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">
+                  <span
+                    className={`text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                      cookingTimer === 0
+                        ? 'text-rose-700 dark:text-rose-300'
+                        : 'text-caramel-800 dark:text-caramel-300'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    {cookingTimer === 0 ? '倒计时完成 · 请注意火候' : '灶台倒计时助手'}
+                  </span>
+                  <div
+                    className={`text-3xl font-bold font-mono tabular-nums mt-1 tracking-wider transition-colors ${
+                      cookingTimer === 0
+                        ? 'text-rose-600 dark:text-rose-400 font-extrabold'
+                        : 'text-stone-900 dark:text-stone-100'
+                    }`}
+                  >
                     {Math.floor(cookingTimer / 60)
                       .toString()
                       .padStart(2, '0')}
                     :{(cookingTimer % 60).toString().padStart(2, '0')}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsTimerRunning(!isTimerRunning)}
-                    className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 shadow-sm transition-all"
-                  >
-                    {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                  </button>
+                <div className="flex items-center gap-2.5">
+                  <div className="relative">
+                    {/* 运行时的呼吸脉冲波纹环，让用户在厨房 1 米开外一眼即知正在倒计时 */}
+                    {isTimerRunning && (
+                      <span className="absolute -inset-1 rounded-full bg-forest-600/30 dark:bg-forest-500/40 animate-timer-ripple pointer-events-none" />
+                    )}
+                    <button
+                      onClick={() => setIsTimerRunning(!isTimerRunning)}
+                      className={`relative w-11 h-11 rounded-full text-white flex items-center justify-center shadow-ambient-emerald transition-all active:scale-90 ${
+                        isTimerRunning
+                          ? 'bg-forest-700 hover:bg-forest-800 ring-2 ring-forest-500/30'
+                          : 'bg-forest-800 hover:bg-forest-900'
+                      }`}
+                      title={isTimerRunning ? '暂停计时' : '开始计时'}
+                    >
+                      {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+                    </button>
+                  </div>
                   <button
                     onClick={() => {
                       setIsTimerRunning(false);
                       setCookingTimer((selectedRecipe.cook_time || 5) * 60);
                     }}
-                    className="w-10 h-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-300 transition-all"
+                    className="w-11 h-11 rounded-full bg-stone-200/80 dark:bg-stone-700/80 text-stone-700 dark:text-stone-200 flex items-center justify-center hover:bg-stone-300 dark:hover:bg-stone-600 transition-all active:scale-90"
+                    title="重置时间"
                   >
                     <RotateCcw className="w-4 h-4" />
                   </button>
@@ -1260,23 +1343,37 @@ export default function ShikeApp() {
             </div>
 
             {/* Modal Bottom Action */}
-            <div className="p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row gap-2.5">
+            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-[#FAFAF7] dark:bg-[#141514] flex flex-col sm:flex-row gap-3">
               {selectedRecipe.id.startsWith('ai-recipe-') && (
                 <button
                   type="button"
                   onClick={() => handleDeleteRecipe(selectedRecipe.id)}
-                  className="py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-semibold text-xs sm:text-sm border border-rose-200/80 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                  className="py-3 px-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 active:scale-98 text-rose-600 dark:text-rose-300 font-medium text-xs sm:text-sm border border-rose-200/80 dark:border-rose-800/50 transition-all flex items-center justify-center gap-1.5 shadow-soft"
                 >
-                  <Trash2 className="w-4 h-4 text-rose-500" />
+                  <Trash2 className="w-4 h-4" />
                   <span>删除此 AI 菜谱</span>
                 </button>
               )}
               <button
                 onClick={() => handleCook(selectedRecipe)}
-                className="flex-1 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                disabled={isCookingSuccess}
+                className={`flex-1 py-3.5 px-5 rounded-2xl text-white font-medium text-sm sm:text-base shadow-ambient-emerald transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 ${
+                  isCookingSuccess
+                    ? 'bg-emerald-600 scale-[1.02] shadow-emerald-500/25 ring-2 ring-emerald-400/50'
+                    : 'bg-forest-900 hover:bg-forest-950 dark:bg-forest-700 dark:hover:bg-forest-600'
+                }`}
               >
-                <Utensils className="w-4 h-4 text-emerald-400" />
-                <span>完成下厨 · 自动同步扣减食材库存</span>
+                {isCookingSuccess ? (
+                  <>
+                    <Check className="w-5 h-5 text-white animate-bounce" />
+                    <span className="font-semibold tracking-wide">开饭啦！食材已自动扣减</span>
+                  </>
+                ) : (
+                  <>
+                    <Utensils className="w-4 h-4 text-caramel-300" />
+                    <span>完成下厨 · 自动同步扣减食材库存</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1285,38 +1382,38 @@ export default function ShikeApp() {
 
       {/* MANUAL ADD INGREDIENT MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-sm text-slate-900">手动录入食材</h3>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#1E201D] rounded-3xl p-6 shadow-modal border border-[#1C1D1B]/[0.08] dark:border-white/[0.08] space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3.5">
+              <h3 className="font-bold text-base text-stone-900 dark:text-stone-100">手动录入食材</h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleManualAdd} className="space-y-3">
+            <form onSubmit={handleManualAdd} className="space-y-3.5">
               <div>
-                <label className="text-xs font-semibold text-slate-700">食材名称</label>
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">食材名称</label>
                 <input
                   type="text"
                   required
                   placeholder="如：西红柿、土豆、五花肉"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  className="w-full mt-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                  className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700">分类</label>
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">分类</label>
                   <select
                     value={newItemCategory}
                     onChange={(e) => setNewItemCategory(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                    className="w-full mt-1.5 px-3 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                   >
                     <option>蔬菜类</option>
                     <option>肉禽蛋类</option>
@@ -1329,23 +1426,23 @@ export default function ShikeApp() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700">预估份量</label>
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">预估份量</label>
                   <input
                     type="text"
                     value={newItemQty}
                     onChange={(e) => setNewItemQty(e.target.value)}
-                    className="w-full mt-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                    className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700">存放位置</label>
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">存放位置</label>
                   <select
                     value={newItemLocation}
                     onChange={(e) => setNewItemLocation(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                    className="w-full mt-1.5 px-3 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                   >
                     <option>冷藏室</option>
                     <option>冷藏抽屉</option>
@@ -1356,21 +1453,21 @@ export default function ShikeApp() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700">保存天数</label>
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">保存天数</label>
                   <input
                     type="number"
                     min="1"
                     max="60"
                     value={newItemDays}
                     onChange={(e) => setNewItemDays(Number(e.target.value))}
-                    className="w-full mt-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                    className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full mt-2 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all"
+                className="w-full mt-2 py-3 rounded-2xl bg-forest-800 hover:bg-forest-900 text-white font-medium text-xs sm:text-sm shadow-soft transition-all active:scale-98"
               >
                 确认录入
               </button>
@@ -1381,26 +1478,26 @@ export default function ShikeApp() {
 
       {/* Auth Modal (Login / Register) */}
       {showAuthModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl border border-slate-200/80 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-6 w-full max-w-sm shadow-modal border border-[#1C1D1B]/[0.08] dark:border-white/[0.08] animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-forest-50 dark:bg-forest-900/50 text-forest-700 dark:text-forest-300 flex items-center justify-center">
                   <User className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-sm text-slate-900">
+                <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100">
                   {authMode === 'login' ? '登录食刻 AI' : '注册新账号'}
                 </h3>
               </div>
               <button
                 onClick={() => setShowAuthModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-1"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-2.5 leading-relaxed">
               {authMode === 'login'
                 ? '登录后可跨电脑、手机随时查看和管理同一个冰箱，数据永不丢失。'
                 : '自定义一个专属用户名即可，注册后当前设备上的食材将自动归入你的账号。'}
@@ -1408,83 +1505,83 @@ export default function ShikeApp() {
 
             <form onSubmit={handleAuthSubmit} className="space-y-3.5 mt-4">
               {authError && (
-                <div className="p-3 rounded-2xl bg-red-50 border border-red-200/90 text-xs text-red-600 flex items-start gap-2.5 animate-in fade-in duration-150">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-500 mt-0.5" />
+                <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/90 dark:border-rose-800/50 text-xs text-rose-600 dark:text-rose-300 flex items-start gap-2.5 animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-500 mt-0.5" />
                   <div className="leading-snug">
                     <p className="font-semibold">
                       {authError.includes('锁定') ? '🔒 登录防爆破安全保护已触发' : '验证提示'}
                     </p>
-                    <p className="text-[11px] text-red-700 mt-0.5">{authError}</p>
+                    <p className="text-[11px] text-rose-700 dark:text-rose-400 mt-0.5">{authError}</p>
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="text-xs font-semibold text-slate-700">用户名</label>
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">用户名</label>
                 <input
                   type="text"
                   required
                   placeholder="如：baobao / kaikai"
                   value={authUsername}
                   onChange={(e) => setAuthUsername(e.target.value)}
-                  className="w-full mt-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                  className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                 />
               </div>
 
               {authMode === 'register' && (
                 <div>
-                  <label className="text-xs font-semibold text-slate-700">个性昵称 (选填)</label>
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">个性昵称 (选填)</label>
                   <input
                     type="text"
                     placeholder="如：大厨包包"
                     value={authNickname}
                     onChange={(e) => setAuthNickname(e.target.value)}
-                    className="w-full mt-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                    className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                   />
                 </div>
               )}
 
               <div>
-                <label className="text-xs font-semibold text-slate-700">密码</label>
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">密码</label>
                 <input
                   type="password"
                   required
                   placeholder="至少6位密码"
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
-                  className="w-full mt-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                  className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-700">安全验证码</label>
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">安全验证码</label>
                   <button
                     type="button"
                     onClick={loadCaptcha}
-                    className="text-[11px] text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
+                    className="text-[11px] text-forest-700 dark:text-forest-400 hover:underline flex items-center gap-1 transition-colors"
                   >
                     <RefreshCw className={`w-3 h-3 ${captchaLoading ? 'animate-spin' : ''}`} />
                     <span>换一张</span>
                   </button>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1.5">
                   <input
                     type="text"
                     required
                     placeholder="输入计算结果"
                     value={captchaCode}
                     onChange={(e) => setCaptchaCode(e.target.value)}
-                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-transparent text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 transition-colors"
                   />
                   <div
                     onClick={loadCaptcha}
                     title="点击更换验证码"
-                    className="cursor-pointer flex-shrink-0 relative rounded-xl overflow-hidden border border-slate-200 hover:border-emerald-500 transition-all bg-slate-50 flex items-center justify-center min-w-[124px] h-[40px] shadow-sm select-none"
+                    className="cursor-pointer flex-shrink-0 relative rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 hover:border-forest-500 transition-all bg-stone-50 dark:bg-stone-800/80 flex items-center justify-center min-w-[124px] h-[42px] shadow-sm select-none"
                   >
                     {captchaLoading ? (
-                      <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                      <div className="flex items-center gap-1.5 text-stone-400 text-[11px]">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-forest-600" />
                         <span>加载中...</span>
                       </div>
                     ) : captchaData?.svg ? (
@@ -1495,7 +1592,7 @@ export default function ShikeApp() {
                         className="w-full h-full object-contain pointer-events-none"
                       />
                     ) : (
-                      <span className="text-[11px] text-slate-400">点击获取</span>
+                      <span className="text-[11px] text-stone-400">点击获取</span>
                     )}
                   </div>
                 </div>
@@ -1504,20 +1601,20 @@ export default function ShikeApp() {
               <button
                 type="submit"
                 disabled={isAuthSubmitting}
-                className="w-full mt-2 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-xs shadow-sm transition-all"
+                className="w-full mt-2 py-3.5 rounded-2xl bg-forest-800 hover:bg-forest-900 disabled:opacity-50 text-white font-medium text-xs sm:text-sm shadow-soft transition-all active:scale-98"
               >
                 {isAuthSubmitting ? '处理中...' : authMode === 'login' ? '立即登录并同步' : '完成注册并自动登录'}
               </button>
             </form>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-slate-500">
+            <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-xs">
+              <span className="text-stone-500 dark:text-stone-400">
                 {authMode === 'login' ? '还没有账号？' : '已有账号？'}
               </span>
               <button
                 type="button"
                 onClick={() => switchAuthMode(authMode === 'login' ? 'register' : 'login')}
-                className="text-emerald-700 font-bold hover:underline"
+                className="text-forest-700 dark:text-forest-400 font-medium hover:underline"
               >
                 {authMode === 'login' ? '免费注册一个' : '直接登录'}
               </button>
@@ -1527,11 +1624,11 @@ export default function ShikeApp() {
       )}
 
       {/* MOBILE BOTTOM NAVIGATION DOCK */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-slate-200/80 px-4 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] flex items-center justify-around">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAFAF7]/90 dark:bg-[#141514]/90 backdrop-blur-md border-t border-[#1C1D1B]/[0.06] dark:border-white/[0.08] px-4 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] flex items-center justify-around shadow-modal">
         <button
           onClick={() => setActiveTab('recipes')}
           className={`flex flex-col items-center gap-1 text-[11px] font-medium transition-colors ${
-            activeTab === 'recipes' ? 'text-emerald-700' : 'text-slate-400'
+            activeTab === 'recipes' ? 'text-forest-800 dark:text-forest-300' : 'text-stone-400 dark:text-stone-500'
           }`}
         >
           <ChefHat className="w-5 h-5" />
@@ -1539,17 +1636,22 @@ export default function ShikeApp() {
         </button>
 
         {/* Big Shutter Camera Center Button */}
-        <button
-          onClick={() => setActiveTab('scan')}
-          className="relative -top-3 w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"
-        >
-          <Camera className="w-6 h-6" />
-        </button>
+        <div className="relative -top-3">
+          {/* 常态柔和呼吸光晕环 */}
+          <div className="absolute -inset-1.5 rounded-full bg-forest-600/30 dark:bg-forest-500/35 blur-sm animate-pulse-glow pointer-events-none" />
+          <button
+            onClick={() => setActiveTab('scan')}
+            aria-label="拍冰箱入库"
+            className="relative w-12 h-12 rounded-full bg-gradient-to-tr from-forest-900 via-forest-800 to-forest-700 hover:from-forest-800 hover:to-forest-600 text-white flex items-center justify-center shadow-ambient-emerald border-2 border-white/20 active:scale-85 transition-transform duration-150 ease-out"
+          >
+            <Camera className="w-5 h-5 transition-transform duration-150 active:scale-90" />
+          </button>
+        </div>
 
         <button
           onClick={() => setActiveTab('inventory')}
           className={`flex flex-col items-center gap-1 text-[11px] font-medium transition-colors ${
-            activeTab === 'inventory' ? 'text-emerald-700' : 'text-slate-400'
+            activeTab === 'inventory' ? 'text-forest-800 dark:text-forest-300' : 'text-stone-400 dark:text-stone-500'
           }`}
         >
           <Refrigerator className="w-5 h-5" />

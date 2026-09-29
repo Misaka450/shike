@@ -3,23 +3,179 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FAFAF7;
+  --foreground: #1C1D1B;
+  --surface: #FFFFFF;
+  --surface-warm: #F4F4EE;
+  --surface-card: #FFFFFF;
+  --border-subtle: rgba(28, 29, 27, 0.07);
+  --border-medium: rgba(28, 29, 27, 0.12);
+  --primary-deep: #1B382B;
+  --primary-forest: #234E3D;
+  --primary-sage: #4E6F5E;
+  --primary-sage-light: #EBF3EE;
+  --accent-caramel: #C86D2C;
+  --accent-caramel-warm: #D97706;
+  --accent-caramel-light: #FDF5ED;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #141514;
+    --foreground: #EDEDE8;
+    --surface: #1C1E1B;
+    --surface-warm: #222521;
+    --surface-card: #1E201D;
+    --border-subtle: rgba(237, 237, 232, 0.08);
+    --border-medium: rgba(237, 237, 232, 0.14);
+    --primary-deep: #2A5440;
+    --primary-forest: #3B7558;
+    --primary-sage: #7AA28D;
+    --primary-sage-light: #1A2820;
+    --accent-caramel: #E0853D;
+    --accent-caramel-warm: #F59E0B;
+    --accent-caramel-light: #2D2218;
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
 
+/* 柔和微弥散环境光阴影体系 */
+.shadow-soft {
+  box-shadow: 0 4px 20px -2px rgba(28, 29, 27, 0.05), 0 2px 6px -1px rgba(28, 29, 27, 0.03);
+}
+
+.shadow-card {
+  box-shadow: 0 8px 30px -4px rgba(28, 29, 27, 0.06), 0 2px 8px -2px rgba(28, 29, 27, 0.03);
+}
+
+.shadow-card-hover {
+  box-shadow: 0 16px 36px -6px rgba(28, 29, 27, 0.09), 0 4px 12px -2px rgba(28, 29, 27, 0.04);
+}
+
+.shadow-modal {
+  box-shadow: 0 25px 60px -15px rgba(28, 29, 27, 0.22), 0 0 1px 1px rgba(28, 29, 27, 0.05);
+}
+
+.shadow-ambient-emerald {
+  box-shadow: 0 8px 24px -4px rgba(35, 78, 61, 0.25);
+}
+
+.shadow-ambient-caramel {
+  box-shadow: 0 8px 24px -4px rgba(200, 109, 44, 0.28);
+}
+
+/* 微动效与微质感光晕 (Micro-interactions) */
+@keyframes subtle-pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.85;
+  }
+}
+
+@keyframes timer-ripple {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.75;
+  }
+  70% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes slow-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+}
+
+@keyframes shine-sweep {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-15deg);
+  }
+}
+
+@keyframes zero-alarm {
+  0%, 100% {
+    transform: scale(1);
+  }
+  20%, 60% {
+    transform: scale(1.04);
+  }
+  40%, 80% {
+    transform: scale(0.98);
+  }
+}
+
+.animate-pulse-glow {
+  animation: subtle-pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-timer-ripple {
+  animation: timer-ripple 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.animate-slow-pulse {
+  animation: slow-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-zero-alarm {
+  animation: zero-alarm 1.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* 按钮微质感流光 */
+.btn-shimmer-caramel {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shimmer-caramel::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.28) 35%,
+    transparent 50%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.btn-shimmer-caramel:hover::after {
+  transform: translateX(100%);
+}
+
+/* 舒缓平滑滚动与排版 */
 @layer utilities {
   .text-balance {
     text-wrap: balance;

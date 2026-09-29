@@ -9209,7 +9209,7 @@
       "见汤变白后倒入准备好的豆腐，调中火再煮 5 分钟，加入 10g 盐、3g 胡椒粉调味，最后撒上葱花出锅。"
     ],
     "tips": "",
-    "image_url": "https://assets.tmecosys.cn/image/upload/t_web_rdp_recipe_584x480_1_5x/img/recipe/ras/Assets/7f319d936be3b6cae64ee2a2e4219cd5/Derivates/ae1020cd38f2b781862488a193a85ff546e1a8c4.jpg"
+    "image_url": "/images/dishes/recipe_angci_tofu_soup.webp"
   },
   {
     "id": "recipe-htc-70be485e64",
@@ -14194,7 +14194,7 @@
       "开盖加入剩余 15 g 盐，混合均匀后盛盘。"
     ],
     "tips": "番茄尽量不用新鲜番茄代替，番茄罐头+番茄膏的组合风味更足；除了胡萝卜、洋葱、欧芹、牛肉是必备食材外，其余可自由搭配",
-    "image_url": "https://ss2.baidu.com/6ONYsjip0QIZ8tyhnq/it/u=1746829433,2970255586&fm=170&s=CAE30ED00A505AC405825DE403004063&w=640&h=397&img.PNG"
+    "image_url": "/images/dishes/recipe_luosong_soup.webp"
   },
   {
     "id": "recipe-htc-b4bc9ab7f6",
@@ -14627,7 +14627,7 @@
       "取第 3 步炸酱，倒入碗中，拌匀。然后取第 1 步菜码，倒入碗中，拌匀。"
     ],
     "tips": "肉推荐瘦肉丁，口感更好，推荐现买现用。；*面条*推荐使用*普通面条*。；面条口感关键在于劲道。勿选龙须等细面。；如有条件（另一个锅）且熟练后，第 2、3 步和 1、4、5、6 步可分时并行执行。；甜咸口个人有爱好，两种酱的配比需要自己迭代优化",
-    "image_url": "https://assets.tmecosys.com/image/upload/t_web767x639/img/recipe/ras/Assets/4e568de4-0bf7-4e28-ad6f-dcf0cf1865ea/Derivates/63b06fa5-21b8-4f2b-bb1f-62906391360c.jpg"
+    "image_url": "/images/dishes/recipe_zhajiang_mian.webp"
   },
   {
     "id": "recipe-htc-b7a8258db0",
@@ -17417,7 +17417,7 @@
     "id": "recipe-htc-db6a89ffe7",
     "name": "牛排",
     "category": "荤菜",
-    "cuisine": "中餐",
+    "cuisine": "西餐轻食",
     "difficulty": "简单",
     "prep_time": 10,
     "cook_time": 20,
@@ -17499,7 +17499,7 @@
       "取出配菜，装盘，淋上锅中剩余的油或者牛排酱汁（可选）。"
     ],
     "tips": "煎制牛排是控制火候的艺术。限于篇幅，这里简单给出一些定量评估火力的方法和本文中用到的与火候相关的术语。更多内容参见油温判断技巧。；对于电磁炉：；高火：功率 1.8Kw - 2.2kw。；中火：功率 800w - 1.4kw。；小火：功率 200w - 600w。；对于燃气灶：；高火：旋转气阀至最大出气速度的 70%-90%。；中火：旋转气阀至最大出气速度的 40%-60%。；小火：旋转气阀至最大出气速度的 10%-30%。；牛排的调味不一定需要遵循本指南的规范。通常来说，大蒜、黑胡椒和黄油是必须的，但如果您不喜欢迷迭香或百里香等唇形科植物等味道，您可以自由尝试其他牛排调味料进行调味。市面上也有售卖的多种烤肉调味盐可供选择。笔者曾发现一种中西结合的做法，即将小米辣切开与蒜片加入橄榄油中煎，并作为调味在最后淋到牛排上，也独具风味",
-    "image_url": "https://ss2.baidu.com/6ONYsjip0QIZ8tyhnq/it/u=1615962323,823635108&fm=179&app=35&f=PNG?w=747&h=465"
+    "image_url": "/images/dishes/recipe_steak.webp"
   },
   {
     "id": "recipe-htc-dc80459ec8",
@@ -20240,7 +20240,7 @@
       "将炒好的浓汁香菇盛在青菜盘中心即可。"
     ],
     "tips": "青菜脆嫩清香，香菇吸收蚝油滑润浓郁，色泽碧绿油润荤素得宜",
-    "image_url": "http://clubimg.club.vmall.com/data/attachment/forum/202005/09/044043kx8u5anpbwol7zxq.jpg"
+    "image_url": "/images/dishes/recipe_xianggu_qingcai.webp"
   },
   {
     "id": "recipe-mushroom-tofu-fresh-soup",
@@ -20337,7 +20337,7 @@
       "将滚烫浓郁的蒜香蚝油汁均匀浇淋在生菜上即可。"
     ],
     "tips": "焯水加盐和油能保持生菜翠绿清脆，焯水时间切不可过长以免发软失脆",
-    "image_url": "https://assets.tmecosys.cn/image/upload/t_web767x639/img/recipe/ras/Assets/311111d7f87a2b170adc536ab17de577/Derivates/f4b15c5101c8b9d00f06d90443758e10148d5880.jpg"
+    "image_url": "/images/dishes/recipe_haoyou_shengcai.webp"
   },
   {
     "id": "recipe-pan-seared-salmon",
