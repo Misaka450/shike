@@ -86,10 +86,15 @@ visionRoute.post('/fridge-scan', async (c) => {
   let imageBuffer: Buffer | null = null;
   let mimeType = 'image/jpeg';
   let autoAdd = false;
+  let mode: 'fridge' | 'receipt' = 'fridge';
 
   if (contentType.includes('multipart/form-data')) {
     const body = await c.req.parseBody();
     const file = body['file'] || body['image'];
+
+    if (body['mode'] === 'receipt') {
+      mode = 'receipt';
+    }
 
     if (body['auto_add'] === 'true' || body['auto_add'] === '1') {
       autoAdd = true;
@@ -110,10 +115,12 @@ visionRoute.post('/fridge-scan', async (c) => {
   } else if (contentType.includes('application/json')) {
     const json = (await readJsonBody(c)) as {
       auto_add?: boolean;
+      mode?: 'fridge' | 'receipt';
       image?: string;
       mime_type?: string;
     };
     if (json.auto_add) autoAdd = true;
+    if (json.mode === 'receipt') mode = 'receipt';
 
     if (json.image && typeof json.image === 'string') {
       // 解码前先按字符串长度拦截，避免为一个超大 base64 白白分配内存
@@ -179,7 +186,7 @@ visionRoute.post('/fridge-scan', async (c) => {
   mimeType = sniffed;
 
   try {
-    const scanResult = await scanFridgeImage(imageBuffer, mimeType);
+    const scanResult = await scanFridgeImage(imageBuffer, mimeType, mode);
 
     let addedItems = null;
     if (autoAdd && scanResult.items.length > 0) {

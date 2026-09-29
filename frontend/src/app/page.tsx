@@ -29,6 +29,7 @@ import {
   ShoppingCart,
   Zap,
   Copy,
+  Receipt,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -212,6 +213,7 @@ export default function ShikeApp() {
   }, [showAuthModal]);
 
   // Scanning State
+  const [scanMode, setScanMode] = useState<'fridge' | 'receipt'>('fridge');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -432,8 +434,8 @@ export default function ShikeApp() {
     if (!selectedFile && !previewUrl) return;
     try {
       setIsScanning(true);
-      // 优先传输已在端侧完成智能压缩的 Base64 数据或压缩文件
-      const res = await scanFridgeImage(previewUrl || selectedFile!);
+      // 优先传输已在端侧完成智能压缩的 Base64 数据或压缩文件，并带上识别模式
+      const res = await scanFridgeImage(previewUrl || selectedFile!, scanMode);
       setScanResult(res);
       // Select all by default
       const initialSelected: Record<number, boolean> = {};
@@ -441,7 +443,11 @@ export default function ShikeApp() {
         initialSelected[idx] = true;
       });
       setSelectedScanItems(initialSelected);
-      showToast(`成功识别到 ${res.items.length} 种食材！`);
+      if (scanMode === 'receipt') {
+        showToast(`已从小票/订单解析提取到 ${res.items.length} 种生鲜食材！`);
+      } else {
+        showToast(`成功识别到 ${res.items.length} 种食材！`);
+      }
     } catch (err: any) {
       showToast(err.message || '识别失败，请重试');
     } finally {
@@ -1148,16 +1154,60 @@ export default function ShikeApp() {
           </div>
         )}
 
-        {/* TAB 2: FRIDGE SCAN */}
+        {/* TAB 2: FRIDGE SCAN & RECEIPT OCR */}
         {activeTab === 'scan' && (
           <div className="max-w-2xl mx-auto space-y-6">
-            <div className="text-center">
-              <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-                冰箱全景多模态识别
-              </h1>
-              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-                拍一张冰箱整层照片，AI 自动批量提取食材、分类及建议存放周期
-              </p>
+            <div className="text-center space-y-3">
+              <div>
+                <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+                  {scanMode === 'receipt' ? '买菜小票 / 订单截图一键扫入' : '冰箱全景多模态识别'}
+                </h1>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                  {scanMode === 'receipt'
+                    ? '支持超市纸质小票（山姆、大润发等）及盒马/朴朴/美团订单截图，AI 自动剥离杂质批量入库'
+                    : '拍一张冰箱整层照片，AI 自动批量提取食材、分类及建议存放周期'}
+                </p>
+              </div>
+
+              {/* 识别模式切换胶囊 */}
+              <div className="flex justify-center pt-1">
+                <div className="inline-flex p-1 rounded-2xl bg-stone-100/90 dark:bg-stone-800/80 border border-stone-200/70 dark:border-stone-700/60 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScanMode('fridge');
+                      if (!isScanning) {
+                        setScanResult(null);
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                      scanMode === 'fridge'
+                        ? 'bg-white dark:bg-[#1E201D] text-forest-900 dark:text-forest-200 shadow-xs font-semibold'
+                        : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
+                    }`}
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>📸 拍冰箱内部</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScanMode('receipt');
+                      if (!isScanning) {
+                        setScanResult(null);
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                      scanMode === 'receipt'
+                        ? 'bg-white dark:bg-[#1E201D] text-amber-900 dark:text-amber-200 shadow-xs font-semibold'
+                        : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
+                    }`}
+                  >
+                    <Receipt className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    <span>🧾 扫小票 / 订单截图</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Upload Box */}
@@ -1193,21 +1243,29 @@ export default function ShikeApp() {
                   className="border-2 border-dashed border-stone-200 dark:border-stone-700/80 hover:border-forest-600/70 rounded-2xl p-9 cursor-pointer transition-all bg-stone-50/50 dark:bg-stone-800/20 hover:bg-forest-50/30 dark:hover:bg-forest-950/20 flex flex-col items-center justify-center gap-3.5 group"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-forest-50 dark:bg-forest-900/40 text-forest-700 dark:text-forest-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-                    <UploadCloud className="w-7 h-7" />
+                    {scanMode === 'receipt' ? (
+                      <Receipt className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+                    ) : (
+                      <UploadCloud className="w-7 h-7" />
+                    )}
                   </div>
                   <div>
                     <span className="font-semibold text-sm text-stone-800 dark:text-stone-200">
-                      点击上传或直接拍照
+                      {scanMode === 'receipt'
+                        ? '点击上传小票或订单截图'
+                        : '点击上传或直接拍照'}
                     </span>
                     <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
-                      支持高清手机原图 · 端侧自动智能等比压缩与提速
+                      {scanMode === 'receipt'
+                        ? '山姆/盒马/朴朴/美团订单截图均可 · AI 自动过滤塑料袋等非食品'
+                        : '支持高清手机原图 · 端侧自动智能等比压缩与提速'}
                     </p>
                   </div>
                 </div>
               ) : !isCompressing && previewUrl ? (
                 <div className="space-y-4">
                   <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800 max-h-[360px] mx-auto border border-stone-200/80 dark:border-stone-700">
-                    <img src={previewUrl} alt="冰箱预览" className="w-full h-full object-cover" />
+                    <img src={previewUrl} alt="预览图片" className="w-full h-full object-cover" />
 
                     {/* 压缩体积优化微标签 */}
                     {compressStats && (
@@ -1224,31 +1282,65 @@ export default function ShikeApp() {
                       </div>
                     )}
 
-                    {/* 拍冰箱识图「激光雷达扫描波」（Laser Scan Beam） */}
+                    {/* 动态激光雷达扫描波 (根据模式呈现不同主题辉光) */}
                     {isScanning && (
                       <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
                         {/* 微弱雷达环境阴影与半透明底色遮罩 */}
-                        <div className="absolute inset-0 bg-emerald-950/25 mix-blend-multiply backdrop-blur-[0.5px]" />
+                        <div
+                          className={`absolute inset-0 backdrop-blur-[0.5px] ${
+                            scanMode === 'receipt'
+                              ? 'bg-amber-950/25 mix-blend-multiply'
+                              : 'bg-emerald-950/25 mix-blend-multiply'
+                          }`}
+                        />
                         {/* 微弱雷达网格标线 */}
                         <div
                           className="absolute inset-0 opacity-20"
                           style={{
                             backgroundImage:
-                              'linear-gradient(to right, rgba(16, 185, 129, 0.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(16, 185, 129, 0.35) 1px, transparent 1px)',
+                              scanMode === 'receipt'
+                                ? 'linear-gradient(to right, rgba(217, 119, 6, 0.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(217, 119, 6, 0.35) 1px, transparent 1px)'
+                                : 'linear-gradient(to right, rgba(16, 185, 129, 0.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(16, 185, 129, 0.35) 1px, transparent 1px)',
                             backgroundSize: '24px 24px',
                           }}
                         />
-                        {/* 动态激光扫描束：自上而下反复平滑扫掠，带翡翠绿渐变辉光与半透明扫描线 */}
+                        {/* 动态激光扫描束：自上而下反复平滑扫掠 */}
                         <div className="absolute left-0 right-0 h-28 -mt-14 animate-laser-sweep pointer-events-none">
                           {/* 拖尾辉光渐变 */}
-                          <div className="w-full h-full bg-gradient-to-b from-transparent via-emerald-500/25 to-transparent" />
+                          <div
+                            className={`w-full h-full bg-gradient-to-b from-transparent ${
+                              scanMode === 'receipt'
+                                ? 'via-amber-500/25'
+                                : 'via-emerald-500/25'
+                            } to-transparent`}
+                          />
                           {/* 核心激光扫描线 */}
-                          <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[2.5px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_16px_3px_rgba(16,185,129,0.9),0_0_32px_8px_rgba(5,150,105,0.45)]" />
+                          <div
+                            className={`absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[2.5px] bg-gradient-to-r from-transparent ${
+                              scanMode === 'receipt'
+                                ? 'via-amber-400 shadow-[0_0_16px_3px_rgba(217,119,6,0.9),0_0_32px_8px_rgba(180,83,9,0.45)]'
+                                : 'via-emerald-400 shadow-[0_0_16px_3px_rgba(16,185,129,0.9),0_0_32px_8px_rgba(5,150,105,0.45)]'
+                            } to-transparent`}
+                          />
                         </div>
                         {/* 多模态 AI 识别质感浮动标识 */}
-                        <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/65 backdrop-blur-md border border-emerald-500/40 text-emerald-400 text-xs font-mono shadow-ambient-emerald">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span className="tracking-wider font-semibold">AI LIDAR SCANNING...</span>
+                        <div
+                          className={`absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/65 backdrop-blur-md border text-xs font-mono ${
+                            scanMode === 'receipt'
+                              ? 'border-amber-500/40 text-amber-300'
+                              : 'border-emerald-500/40 text-emerald-400'
+                          }`}
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full animate-ping ${
+                              scanMode === 'receipt' ? 'bg-amber-400' : 'bg-emerald-400'
+                            }`}
+                          />
+                          <span className="tracking-wider font-semibold">
+                            {scanMode === 'receipt'
+                              ? 'AI OCR RECEIPT PARSING...'
+                              : 'AI LIDAR SCANNING...'}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -1271,17 +1363,33 @@ export default function ShikeApp() {
                     <button
                       disabled={isScanning}
                       onClick={handleStartScan}
-                      className="w-full py-3.5 rounded-2xl bg-forest-800 hover:bg-forest-900 disabled:opacity-50 text-white font-medium text-sm shadow-soft transition-all flex items-center justify-center gap-2 active:scale-98"
+                      className={`w-full py-3.5 rounded-2xl text-white font-medium text-sm shadow-soft transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 ${
+                        scanMode === 'receipt'
+                          ? 'bg-amber-700 hover:bg-amber-800'
+                          : 'bg-forest-800 hover:bg-forest-900'
+                      }`}
                     >
                       {isScanning ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
-                          <span>AI 正在全景分析食材...</span>
+                          <span>
+                            {scanMode === 'receipt'
+                              ? 'AI 正在智能解析小票明细并过滤杂质...'
+                              : 'AI 正在全景分析食材...'}
+                          </span>
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-4 h-4 text-caramel-300" />
-                          <span>开始 AI 智能识别</span>
+                          {scanMode === 'receipt' ? (
+                            <Receipt className="w-4 h-4 text-amber-200" />
+                          ) : (
+                            <Sparkles className="w-4 h-4 text-caramel-300" />
+                          )}
+                          <span>
+                            {scanMode === 'receipt'
+                              ? '开始解析小票并提取生鲜'
+                              : '开始 AI 智能识别'}
+                          </span>
                         </>
                       )}
                     </button>
@@ -1295,9 +1403,16 @@ export default function ShikeApp() {
               <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-5 sm:p-6 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card space-y-4">
                 <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3.5">
                   <div>
-                    <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100">
-                      已识别到 {scanResult.items.length} 种食材
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm sm:text-base text-stone-900 dark:text-stone-100">
+                        {scanMode === 'receipt' ? '小票/订单解析清单' : '识别食材清单'} · 共 {scanResult.items.length} 样
+                      </h3>
+                      {scanMode === 'receipt' && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/50 font-medium">
+                          已自动过滤非食品
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">{scanResult.summary}</p>
                   </div>
                   <button
@@ -1358,10 +1473,19 @@ export default function ShikeApp() {
 
                 <button
                   onClick={handleConfirmBatchIngest}
-                  className="w-full py-3.5 rounded-2xl bg-forest-800 hover:bg-forest-900 text-white font-medium text-sm shadow-soft transition-all active:scale-98"
+                  className={`w-full py-3.5 rounded-2xl text-white font-medium text-sm shadow-soft transition-all active:scale-98 flex items-center justify-center gap-2 ${
+                    scanMode === 'receipt'
+                      ? 'bg-amber-700 hover:bg-amber-800'
+                      : 'bg-forest-800 hover:bg-forest-900'
+                  }`}
                 >
-                  确认添加入库 (
-                  {Object.values(selectedScanItems).filter(Boolean).length} 件)
+                  {scanMode === 'receipt' ? (
+                    <Receipt className="w-4 h-4 text-amber-200" />
+                  ) : null}
+                  <span>
+                    确认将选中的生鲜批量入库 (
+                    {Object.values(selectedScanItems).filter(Boolean).length} 件)
+                  </span>
                 </button>
               </div>
             )}

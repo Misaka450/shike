@@ -312,7 +312,10 @@ export async function deleteInventoryItem(id: number): Promise<{ success: boolea
   });
 }
 
-export async function scanFridgeImage(file: File | Blob | string): Promise<FridgeScanResult> {
+export async function scanFridgeImage(
+  file: File | Blob | string,
+  mode: 'fridge' | 'receipt' = 'fridge'
+): Promise<FridgeScanResult> {
   await ensureSession();
 
   let response: Response;
@@ -324,13 +327,14 @@ export async function scanFridgeImage(file: File | Blob | string): Promise<Fridg
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: file }),
+        body: JSON.stringify({ image: file, mode }),
       },
       getToken()
     );
   } else {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('mode', mode);
 
     // 注意：FormData 不能手动设置 Content-Type，浏览器需要自动补上 multipart 边界
     response = await doFetch(
