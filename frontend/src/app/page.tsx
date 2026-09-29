@@ -69,6 +69,8 @@ import { playTimerDoneSound, playCookSuccessSound, playShutterSound } from '@/li
 import EmotionalEmptyState from '@/components/EmotionalEmptyState';
 import KitchenCookMode from '@/components/KitchenCookMode';
 import FridgeStorageMap, { StorageZoneId, STORAGE_ZONES } from '@/components/FridgeStorageMap';
+import CookingScrapbookModal from '@/components/CookingScrapbookModal';
+import ScrapbookGalleryDrawer from '@/components/ScrapbookGalleryDrawer';
 import InventoryCard from '@/components/InventoryCard';
 
 /** 点击「AI 菜谱」按钮时一次生成的菜谱数量 */
@@ -105,6 +107,10 @@ export default function ShikeApp() {
 
   // 灶台大字专注下厨模式状态
   const [isKitchenCookMode, setIsKitchenCookMode] = useState<boolean>(false);
+
+  // 美食手账拍立得状态
+  const [scrapbookRecipe, setScrapbookRecipe] = useState<RecipeRecommendation | null>(null);
+  const [showScrapbookGallery, setShowScrapbookGallery] = useState<boolean>(false);
 
   // 实时更新餐段（每分钟校准一次）
   useEffect(() => {
@@ -651,7 +657,9 @@ export default function ShikeApp() {
         setIsKitchenCookMode(false);
         setCookingMessage(null);
         setIsCookingSuccess(false);
-      }, 2500);
+        // 下厨大功告成，呼出拍立得美食手账
+        setScrapbookRecipe(recipe);
+      }, 1500);
     } catch (err: any) {
       showToast(err.message || '扣库失败');
       setIsCookingSuccess(false);
@@ -747,6 +755,16 @@ export default function ShikeApp() {
             >
               <Camera className="w-3.5 h-3.5" />
               <span>拍冰箱入库</span>
+            </button>
+
+            {/* 美食手账入账册入口 */}
+            <button
+              onClick={() => setShowScrapbookGallery(true)}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-stone-100/90 dark:bg-stone-800/80 hover:bg-stone-200/80 text-stone-700 dark:text-stone-200 text-xs font-medium transition-all active:scale-95 border border-stone-200/60 dark:border-stone-700/60 shadow-xs"
+              title="查看柴米油盐手账与历史下厨拍立得"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-forest-700 dark:text-forest-400" />
+              <span className="hidden sm:inline">美食手账</span>
             </button>
 
             {/* User Profile / Auth Button */}
@@ -2233,6 +2251,24 @@ export default function ShikeApp() {
           </div>
         </div>
       )}
+
+      {/* 生活拍立得美食手账生成弹窗 */}
+      {scrapbookRecipe && (
+        <CookingScrapbookModal
+          recipe={scrapbookRecipe}
+          mealPeriodName={mealPeriod.title}
+          currentUser={userProfile}
+          onClose={() => setScrapbookRecipe(null)}
+          onToast={showToast}
+        />
+      )}
+
+      {/* 美食手账历史相册流抽屉 */}
+      <ScrapbookGalleryDrawer
+        isOpen={showScrapbookGallery}
+        onClose={() => setShowScrapbookGallery(false)}
+        onToast={showToast}
+      />
 
       {/* MOBILE BOTTOM NAVIGATION DOCK */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAFAF7]/90 dark:bg-[#141514]/90 backdrop-blur-md border-t border-[#1C1D1B]/[0.06] dark:border-white/[0.08] px-4 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] flex items-center justify-around shadow-modal">
