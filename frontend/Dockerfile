@@ -6,6 +6,8 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+ARG API_INTERNAL_URL=http://shike-api:8081
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 RUN npm run build
 
 # ---------- 运行阶段 ----------
