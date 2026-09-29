@@ -53,6 +53,7 @@ import { getMealPeriod, MealPeriodInfo } from '@/lib/mealPeriod';
 import { playTimerDoneSound, playCookSuccessSound, playShutterSound } from '@/lib/sound';
 import EmotionalEmptyState from '@/components/EmotionalEmptyState';
 import KitchenCookMode from '@/components/KitchenCookMode';
+import InventoryCard from '@/components/InventoryCard';
 
 /** 点击「AI 菜谱」按钮时一次生成的菜谱数量 */
 const AI_RECIPE_COUNT = 3;
@@ -70,6 +71,7 @@ export default function ShikeApp() {
   });
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [loadingInventory, setLoadingInventory] = useState(false);
+  const [swipedCardId, setSwipedCardId] = useState<number | null>(null);
 
   // Recommendations State
   const [recipes, setRecipes] = useState<RecipeRecommendation[]>([]);
@@ -388,10 +390,18 @@ export default function ShikeApp() {
   };
 
   // Consume / Delete Inventory Item
-  const handleDeleteItem = async (id: number, name: string) => {
+  const handleDeleteItem = async (
+    id: number,
+    name: string,
+    actionType: 'consume' | 'remove' = 'consume'
+  ) => {
     try {
       await deleteInventoryItem(id);
-      showToast(`已标记消耗「${name}」`);
+      if (actionType === 'consume') {
+        showToast(`已标记消耗「${name}」`);
+      } else {
+        showToast(`已从冰箱移出「${name}」`);
+      }
       await refreshData();
     } catch (err: any) {
       showToast(err.message || '操作失败');
@@ -1066,13 +1076,44 @@ export default function ShikeApp() {
                 <div className="space-y-4">
                   <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800 max-h-[360px] mx-auto border border-stone-200/80 dark:border-stone-700">
                     <img src={previewUrl} alt="冰箱预览" className="w-full h-full object-cover" />
+
+                    {/* 拍冰箱识图「激光雷达扫描波」（Laser Scan Beam） */}
+                    {isScanning && (
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
+                        {/* 微弱雷达环境阴影与半透明底色遮罩 */}
+                        <div className="absolute inset-0 bg-emerald-950/25 mix-blend-multiply backdrop-blur-[0.5px]" />
+                        {/* 微弱雷达网格标线 */}
+                        <div
+                          className="absolute inset-0 opacity-20"
+                          style={{
+                            backgroundImage:
+                              'linear-gradient(to right, rgba(16, 185, 129, 0.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(16, 185, 129, 0.35) 1px, transparent 1px)',
+                            backgroundSize: '24px 24px',
+                          }}
+                        />
+                        {/* 动态激光扫描束：自上而下反复平滑扫掠，带翡翠绿渐变辉光与半透明扫描线 */}
+                        <div className="absolute left-0 right-0 h-28 -mt-14 animate-laser-sweep pointer-events-none">
+                          {/* 拖尾辉光渐变 */}
+                          <div className="w-full h-full bg-gradient-to-b from-transparent via-emerald-500/25 to-transparent" />
+                          {/* 核心激光扫描线 */}
+                          <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[2.5px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_16px_3px_rgba(16,185,129,0.9),0_0_32px_8px_rgba(5,150,105,0.45)]" />
+                        </div>
+                        {/* 多模态 AI 识别质感浮动标识 */}
+                        <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/65 backdrop-blur-md border border-emerald-500/40 text-emerald-400 text-xs font-mono shadow-ambient-emerald">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          <span className="tracking-wider font-semibold">AI LIDAR SCANNING...</span>
+                        </div>
+                      </div>
+                    )}
+
                     <button
+                      disabled={isScanning}
                       onClick={() => {
                         setSelectedFile(null);
                         setPreviewUrl(null);
                         setScanResult(null);
                       }}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition-colors shadow-sm"
+                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition-colors shadow-sm disabled:opacity-30 disabled:pointer-events-none z-10"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -1263,80 +1304,20 @@ export default function ShikeApp() {
                 }}
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredInventory.map((item) => {
-                  const isRed = item.urgency_level === 'red';
-                  const isYellow = item.urgency_level === 'yellow';
-                  return (
-                    <div
-                      key={item.id}
-                      className={`p-4 rounded-2xl bg-white dark:bg-[#1E201D] border transition-all duration-200 hover:-translate-y-0.5 flex items-center justify-between shadow-card hover:shadow-card-hover ${
-                        isRed
-                          ? 'border-rose-300/80 dark:border-rose-900/40 bg-rose-50/30 dark:bg-rose-950/20'
-                          : isYellow
-                          ? 'border-caramel-300/80 dark:border-caramel-900/40 bg-caramel-50/30 dark:bg-caramel-950/20'
-                          : 'border-[#1C1D1B]/[0.06] dark:border-white/[0.08]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div
-                          className={`w-2 h-10 rounded-full shrink-0 ${
-                            isRed
-                              ? 'bg-rose-500 animate-slow-pulse'
-                              : isYellow
-                              ? 'bg-caramel-500 animate-slow-pulse'
-                              : 'bg-forest-600'
-                          }`}
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-stone-900 dark:text-stone-100">{item.name}</span>
-                            <span className="text-[10px] text-stone-500 dark:text-stone-400 px-2 py-0.5 bg-stone-100 dark:bg-stone-800 rounded-md">
-                              {item.category}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-stone-400 dark:text-stone-500 mt-1">
-                            <span>{item.quantity}</span>
-                            <span>·</span>
-                            <span>{item.storage_location}</span>
-                            <span>·</span>
-                            <span
-                              className={`font-medium inline-flex items-center gap-1 ${
-                                isRed
-                                  ? 'text-rose-600 dark:text-rose-400'
-                                  : isYellow
-                                  ? 'text-caramel-600 dark:text-caramel-400'
-                                  : 'text-forest-700 dark:text-forest-400'
-                              }`}
-                            >
-                              {(isRed || isYellow) && (
-                                <span
-                                  className={`w-1.5 h-1.5 rounded-full inline-block animate-ping ${
-                                    isRed ? 'bg-rose-500' : 'bg-caramel-500'
-                                  }`}
-                                />
-                              )}
-                              <span>
-                                {item.days_remaining <= 0
-                                  ? '已到期'
-                                  : `最佳赏味剩 ${item.days_remaining} 天`}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleDeleteItem(item.id, item.name)}
-                        className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-stone-400 dark:text-stone-500 hover:text-forest-700 dark:hover:text-forest-300 hover:bg-forest-50 dark:hover:bg-forest-950/60 transition-colors flex items-center gap-1 active:scale-95"
-                        title="标记吃完"
-                      >
-                        <Check className="w-4 h-4" />
-                        <span className="text-[11px]">吃完</span>
-                      </button>
-                    </div>
-                  );
-                })}
+              <div
+                onClick={() => swipedCardId && setSwipedCardId(null)}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              >
+                {filteredInventory.map((item) => (
+                  <InventoryCard
+                    key={item.id}
+                    item={item}
+                    onConsume={(id, name) => handleDeleteItem(id, name, 'consume')}
+                    onRemove={(id, name) => handleDeleteItem(id, name, 'remove')}
+                    swipedCardId={swipedCardId}
+                    setSwipedCardId={setSwipedCardId}
+                  />
+                ))}
               </div>
             )}
           </div>

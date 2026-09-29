@@ -154,6 +154,26 @@ body::before {
   }
 }
 
+/* 拍冰箱识图「激光雷达扫描波」（Laser Scan Beam） */
+@keyframes laser-sweep {
+  0% {
+    top: 0%;
+    opacity: 0.85;
+  }
+  50% {
+    top: 100%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.85;
+  }
+}
+
+.animate-laser-sweep {
+  animation: laser-sweep 2.8s ease-in-out infinite;
+}
+
 .animate-pulse-glow {
   animation: subtle-pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
