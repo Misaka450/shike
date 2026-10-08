@@ -16,6 +16,8 @@ export const db: DatabaseType = new Database(config.DB_PATH);
 db.pragma('journal_mode = WAL');
 // 开启外键约束，保证关联数据的一致性
 db.pragma('foreign_keys = ON');
+// 设置繁忙超时，防止高并发瞬时写入锁争用抛出 SQLITE_BUSY (ARC-01)
+db.pragma('busy_timeout = 5000');
 
 /**
  * 数据库迁移清单（重要约定）

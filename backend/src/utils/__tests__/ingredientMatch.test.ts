@@ -34,8 +34,6 @@ describe('isIngredientMatch（食材名匹配）', () => {
   });
 
   it('不同肉类的同名制品不应互相匹配（牛肉末 / 猪肉末）', () => {
-    // 回归用例：旧实现走模糊包含判断，"牛肉末"会因包含"肉末"被算进"猪肉"分组，
-    // 于是冰箱里的猪肉末会被当成牛肉末的替代品
     assert.equal(isIngredientMatch('牛肉末', '猪肉末'), false);
     assert.equal(isIngredientMatch('猪肉末', '牛肉末'), false);
   });
@@ -46,7 +44,6 @@ describe('isIngredientMatch（食材名匹配）', () => {
   });
 
   it('带修饰词的写法仍应匹配到同义词（有机土豆 / 马铃薯）', () => {
-    // 非标准叫法走模糊兜底路径，保证没有回归
     assert.equal(isIngredientMatch('有机土豆', '马铃薯'), true);
   });
 
@@ -75,5 +72,23 @@ describe('isIngredientMatch（食材名匹配）', () => {
     assert.equal(isIngredientMatch('肉末', '有机牛肉末'), false);
     assert.equal(isIngredientMatch('有机牛肉末', '猪肉末'), false);
     assert.equal(isIngredientMatch('有机洋葱', '洋葱'), true);
+  });
+
+  it('调味品与生鲜主料严禁互斥误匹配 (BUG-04 修复)', () => {
+    assert.equal(isIngredientMatch('鸡精', '鸡'), false);
+    assert.equal(isIngredientMatch('鸡', '鸡精'), false);
+    assert.equal(isIngredientMatch('鸡精', '鸡肉'), false);
+    assert.equal(isIngredientMatch('鱼露', '鱼'), false);
+    assert.equal(isIngredientMatch('鱼露', '草鱼'), false);
+    assert.equal(isIngredientMatch('蚝油', '生蚝'), false);
+    assert.equal(isIngredientMatch('生蚝', '蚝油'), false);
+    assert.equal(isIngredientMatch('猪油', '猪肉'), false);
+    assert.equal(isIngredientMatch('牛油', '牛肉'), false);
+    assert.equal(isIngredientMatch('虾皮', '基围虾'), false);
+
+    // 同为调料时正常匹配
+    assert.equal(isIngredientMatch('蚝油', '蚝油'), true);
+    assert.equal(isIngredientMatch('优质蚝油', '蚝油'), true);
+    assert.equal(isIngredientMatch('鸡精', '鸡精'), true);
   });
 });

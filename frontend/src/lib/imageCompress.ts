@@ -63,6 +63,10 @@ export async function compressImage(
           return;
         }
 
+        // 默认填充纯白底色，防止含透明通道的图片在降级导出为 JPEG 时背景变黑 (PERF-01)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+
         // 平滑缩放绘制
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
@@ -104,3 +108,4 @@ export function dataUrlToFile(dataUrl: string, filename: string = 'compressed.we
   }
   return new File([u8arr], filename, { type: mime });
 }
+

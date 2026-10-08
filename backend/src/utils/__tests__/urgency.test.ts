@@ -33,6 +33,12 @@ describe('calculateDaysRemaining（剩余保质期天数计算）', () => {
   it('昨天已过期应返回 -1', () => {
     assert.equal(calculateDaysRemaining(daysFromToday(-1)), -1);
   });
+
+  it('严格基于年月日计算，不因 ISO 字符串的 UTC 解析产生回退偏差 (BUG-01)', () => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    assert.equal(calculateDaysRemaining(todayStr), 0);
+  });
 });
 
 describe('computeUrgency（三级警戒灯判定）', () => {

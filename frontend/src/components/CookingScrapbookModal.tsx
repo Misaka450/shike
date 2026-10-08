@@ -71,6 +71,36 @@ export default function CookingScrapbookModal({
     return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
   }, []);
 
+  // 保持稳定的手账 ID，避免重复写入割裂
+  const entryIdRef = useRef(`${recipe.id}-${Date.now()}`);
+
+  // 同步保存到本地手账记录（修复 BUG-03）
+  const syncScrapbookEntry = React.useCallback(
+    (customPhoto?: string, customRating?: number, customNote?: string) => {
+      const entry: ScrapbookEntry = {
+        id: entryIdRef.current,
+        recipeName: recipe.name,
+        recipeCategory: recipe.category,
+        imageUrl: customPhoto ?? photoUrl,
+        cookedAt: todayStr,
+        mealPeriodName,
+        chefName,
+        rating: customRating ?? rating,
+        note: customNote ?? note,
+        ingredientsCount: recipe.ingredients?.length || 0,
+      };
+      saveScrapbookEntry(entry);
+      setHasSaved(true);
+    },
+    [recipe.name, recipe.category, recipe.ingredients?.length, photoUrl, todayStr, mealPeriodName, chefName, rating, note]
+  );
+
+  // 初次挂载时保存默认记录
+  useEffect(() => {
+    syncScrapbookEntry();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 更换真实照片
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,29 +108,12 @@ export default function CookingScrapbookModal({
     try {
       const compressed = await compressImage(file, 1200, 0.85);
       setPhotoUrl(compressed);
-      onToast('已更新成品照片！');
+      syncScrapbookEntry(compressed, rating, note);
+      onToast('已更新成品照片并同步手账！');
     } catch {
       onToast('照片处理失败，请重试');
     }
   };
-
-  // 保存到本地手账记录
-  useEffect(() => {
-    const entry: ScrapbookEntry = {
-      id: `${recipe.id}-${Date.now()}`,
-      recipeName: recipe.name,
-      recipeCategory: recipe.category,
-      imageUrl: photoUrl,
-      cookedAt: todayStr,
-      mealPeriodName,
-      chefName,
-      rating,
-      note,
-      ingredientsCount: recipe.ingredients?.length || 0,
-    };
-    saveScrapbookEntry(entry);
-    setHasSaved(true);
-  }, []);
 
   // 纯前端 Canvas 渲染并导出高质量拍立得图片
   const handleExportPolaroid = async () => {
@@ -110,11 +123,17 @@ export default function CookingScrapbookModal({
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      // 拍立得卡片尺寸 (800 x 1060)
+      // 拍立得卡片尺寸 (Retina 2x 超清 1600 x 2120 物理像素渲染)
       const width = 800;
       const height = 1060;
-      canvas.width = width;
-      canvas.height = height;
+      const dpr = 2;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+
+      // 缩放绘图上下文，坐标维持逻辑尺寸，画面锐利度提升一倍
+      ctx.scale(dpr, dpr);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
       // 1. 底卡温润燕麦米白纸张底色
       ctx.fillStyle = '#FAF8F5';
@@ -249,7 +268,9 @@ export default function CookingScrapbookModal({
       // 导出下载
       const dataUrl = canvas.toDataURL('image/png', 0.95);
       const link = document.createElement('a');
-      link.download = `食刻手账-${recipe.name}-${Date.now()}.png`;
+      syncScrapbookEntry(photoUrl, rating, note);
+      const sanitizedName = (recipe.name || '美食').replace(/[\/\\?%*:|"<>]/g, '_');
+      link.download = `食刻手账-${sanitizedName}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
       onToast('已生成拍立得手账长图并开始下载！');
@@ -332,7 +353,7 @@ export default function CookingScrapbookModal({
                   <button
                     key={star}
                     type="button"
-                    onClick={() => setRating(star)}
+                    onClick={() => { setRating(star); syncScrapbookEntry(photoUrl, star, note); }}
                     className="p-0.5 text-amber-500 hover:scale-110 active:scale-95 transition-transform"
                     title={`打 ${star} 星`}
                   >
@@ -358,7 +379,7 @@ export default function CookingScrapbookModal({
               <input
                 type="text"
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(e) => { const val = e.target.value; setNote(val); syncScrapbookEntry(photoUrl, rating, val); }}
                 maxLength={45}
                 placeholder="记录今晚的味道感受…"
                 className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50/80 dark:bg-stone-800 text-xs focus:outline-none focus:border-forest-600 dark:focus:border-forest-400"
@@ -401,3 +422,5 @@ export default function CookingScrapbookModal({
     </div>
   );
 }
+
+

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ChefHat,
+  Search,
   Camera,
   Refrigerator,
   Clock,
@@ -88,6 +89,8 @@ export default function ShikeApp() {
     green_safe: 0,
   });
   const [selectedZone, setSelectedZone] = useState<StorageZoneId>('all');
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [excludedMissing, setExcludedMissing] = useState<Record<string, boolean>>({});
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [swipedCardId, setSwipedCardId] = useState<number | null>(null);
 
@@ -271,18 +274,22 @@ export default function ShikeApp() {
     return `${d.getMonth() + 1}月${d.getDate()}日`;
   }, [newItemDays]);
 
-  // 菜谱详情缺少食材差额计算
+  // 菜谱详情缺少食材差额计算与单项动态排除
   const modalMissing = useMemo(
     () => (selectedRecipe ? calculateMissingIngredients(selectedRecipe, inventory) : []),
     [selectedRecipe, inventory]
   );
 
+  const effectiveMissing = useMemo(() => {
+    return modalMissing.filter((m) => !excludedMissing[m.name]);
+  }, [modalMissing, excludedMissing]);
+
   const handleCopyShoppingList = async () => {
-    if (!selectedRecipe || modalMissing.length === 0) return;
-    const text = generateShoppingListText(selectedRecipe, modalMissing);
+    if (!selectedRecipe || effectiveMissing.length === 0) return;
+    const text = generateShoppingListText(selectedRecipe, effectiveMissing);
     const success = await copyToClipboard(text);
     if (success) {
-      showToast('已复制清单，直接发给微信或便签即可照着买！');
+      showToast('已复制待买清单，直接发给微信或便签照着买！');
     } else {
       showToast('复制失败，请重试');
     }
@@ -338,6 +345,7 @@ export default function ShikeApp() {
 
   useEffect(() => {
     refreshData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleManualRefresh = async () => {
@@ -374,6 +382,14 @@ export default function ShikeApp() {
     // cookingTimer 在这里只作为本次计时的起点快照，不需要进入依赖数组
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTimerRunning]);
+
+  // 增减倒计时时长（同时同步 deadline 时间戳，修复 BUG-02）
+  const handleAdjustTimer = (deltaSeconds: number) => {
+    if (isTimerRunning) {
+      timerDeadlineRef.current += deltaSeconds * 1000;
+    }
+    setCookingTimer((prev) => Math.max(0, prev + deltaSeconds));
+  };
 
   // 识图多模态链路加速：端侧等比智能压缩 (拍照 / 上传)
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -632,6 +648,7 @@ export default function ShikeApp() {
 
       // 自动打开第一道，方便用户立刻查看食材与步骤
       setSelectedRecipe(aiRecipes[0]);
+      setExcludedMissing({});
       setCookingTimer((aiRecipes[0].cook_time || 5) * 60);
       setIsTimerRunning(false);
 
@@ -687,12 +704,20 @@ export default function ShikeApp() {
     }
   };
 
-  // Filter Inventory by Storage Zone
+  // Filter Inventory by Storage Zone and Search Keyword
   const filteredInventory = inventory.filter((item) => {
-    if (selectedZone === 'all') return true;
-    const targetZone = STORAGE_ZONES.find((z) => z.id === selectedZone);
-    if (!targetZone) return true;
-    return targetZone.match(item);
+    if (selectedZone !== 'all') {
+      const targetZone = STORAGE_ZONES.find((z) => z.id === selectedZone);
+      if (!targetZone || !targetZone.match(item)) return false;
+    }
+    if (inventorySearch.trim()) {
+      const q = inventorySearch.trim().toLowerCase();
+      const matchName = (item.name || '').toLowerCase().includes(q);
+      const matchCategory = (item.category || '').toLowerCase().includes(q);
+      const matchLocation = (item.storage_location || '').toLowerCase().includes(q);
+      if (!matchName && !matchCategory && !matchLocation) return false;
+    }
+    return true;
   });
 
   return (
@@ -949,11 +974,35 @@ export default function ShikeApp() {
               })}
             </div>
 
-            {/* 加载中提示 */}
+            {/* 加载中提示：杂志卡片骨架屏 (Skeleton Cards) */}
             {loadingRecipes && recipes.length === 0 && (
-              <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-12 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card">
-                <div className="w-8 h-8 border-2 border-forest-200 border-t-forest-600 rounded-full animate-spin mx-auto mb-3" />
-                <span className="font-medium text-sm text-stone-700 dark:text-stone-200">正在为你挑选合适的菜谱…</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white dark:bg-[#1E201D] rounded-3xl p-4 sm:p-5 border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card space-y-4 animate-pulse flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="aspect-[16/10] rounded-2xl bg-stone-200/60 dark:bg-stone-800/80 mb-4 relative overflow-hidden">
+                        <div className="absolute top-3 left-3 w-16 h-5 rounded-full bg-stone-300/60 dark:bg-stone-700/60" />
+                        <div className="absolute bottom-3 left-3 w-20 h-5 rounded-full bg-stone-300/60 dark:bg-stone-700/60" />
+                        <div className="absolute bottom-3 right-3 w-14 h-5 rounded-full bg-stone-300/60 dark:bg-stone-700/60" />
+                      </div>
+                      <div className="h-5 w-2/3 bg-stone-200/80 dark:bg-stone-800/90 rounded-lg mb-2" />
+                      <div className="h-3.5 w-full bg-stone-100 dark:bg-stone-800/60 rounded mb-1.5" />
+                      <div className="h-3.5 w-4/5 bg-stone-100 dark:bg-stone-800/60 rounded mb-3" />
+                      <div className="flex gap-1.5 pt-1">
+                        <div className="h-5 w-16 bg-stone-200/60 dark:bg-stone-800/70 rounded-lg" />
+                        <div className="h-5 w-14 bg-stone-200/60 dark:bg-stone-800/70 rounded-lg" />
+                        <div className="h-5 w-14 bg-stone-200/60 dark:bg-stone-800/70 rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="mt-5 pt-3.5 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                      <div className="h-3.5 w-12 bg-stone-200/50 dark:bg-stone-800/50 rounded" />
+                      <div className="h-3.5 w-20 bg-stone-200/50 dark:bg-stone-800/50 rounded" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -1025,6 +1074,7 @@ export default function ShikeApp() {
                   key={recipe.id}
                   onClick={() => {
                     setSelectedRecipe(recipe);
+                    setExcludedMissing({});
                     setIsKitchenCookMode(false);
                     setCookingTimer((recipe.cook_time || 5) * 60);
                     setIsTimerRunning(false);
@@ -1540,6 +1590,30 @@ export default function ShikeApp() {
               />
             )}
 
+            {/* 敏捷食材即时检索输入栏 (Quick Search) */}
+            {inventory.length > 0 && (
+              <div className="relative">
+                <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                  placeholder="快速查找冰箱食材（支持食材名、分类或存放位置）..."
+                  className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-white dark:bg-[#1E201D] border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] text-xs text-stone-800 dark:text-stone-200 placeholder:text-stone-400 focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 shadow-soft transition-colors"
+                />
+                {inventorySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setInventorySearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-300 flex items-center justify-center text-[10px] hover:bg-stone-300 transition-colors"
+                    title="清空搜索"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Segmented Location Filter - 快捷胶囊协同 */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {[
@@ -1590,20 +1664,56 @@ export default function ShikeApp() {
                 }}
               />
             ) : filteredInventory.length === 0 ? (
-              <EmotionalEmptyState
-                type="fridge"
-                title="该储物区暂无食材"
-                description="当前分区整洁清爽，也可以点击切换查看全部食材或录入新食材。"
-                primaryAction={{
-                  label: '查看全部食材',
-                  onClick: () => setSelectedZone('all'),
-                }}
-                secondaryAction={{
-                  label: '录入新食材',
-                  icon: <Plus className="w-3.5 h-3.5" />,
-                  onClick: () => setShowAddModal(true),
-                }}
-              />
+              inventorySearch.trim() ? (
+                <div className="bg-white dark:bg-[#1E201D] rounded-3xl p-10 text-center border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] shadow-card space-y-3 animate-in fade-in">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+                    <Search className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-stone-800 dark:text-stone-200">
+                      未在冰箱中找到包含 “{inventorySearch}” 的食材
+                    </h4>
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      检查关键词是否有误，或者将该食材直接录入到冰箱中
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setInventorySearch('')}
+                      className="px-3.5 py-1.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-medium hover:bg-stone-200 transition-colors"
+                    >
+                      清空搜索
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewItemName(inventorySearch);
+                        setShowAddModal(true);
+                      }}
+                      className="px-3.5 py-1.5 rounded-full bg-forest-800 text-white text-xs font-medium hover:bg-forest-900 transition-colors flex items-center gap-1 shadow-soft"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>录入「{inventorySearch}」</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <EmotionalEmptyState
+                  type="fridge"
+                  title="该储物区暂无食材"
+                  description="当前分区整洁清爽，也可以点击切换查看全部食材或录入新食材。"
+                  primaryAction={{
+                    label: '查看全部食材',
+                    onClick: () => setSelectedZone('all'),
+                  }}
+                  secondaryAction={{
+                    label: '录入新食材',
+                    icon: <Plus className="w-3.5 h-3.5" />,
+                    onClick: () => setShowAddModal(true),
+                  }}
+                />
+              )
             ) : (
               <div
                 onClick={() => swipedCardId && setSwipedCardId(null)}
@@ -1676,6 +1786,7 @@ export default function ShikeApp() {
           }}
           cookingTimer={cookingTimer}
           setCookingTimer={setCookingTimer}
+          onAdjustTimer={handleAdjustTimer}
           isTimerRunning={isTimerRunning}
           setIsTimerRunning={setIsTimerRunning}
           onCook={handleCook}
@@ -1809,44 +1920,73 @@ export default function ShikeApp() {
                   })}
                 </div>
 
-                {/* 差额买菜补货清单卡片与一键生成 */}
+                {/* 差额买菜补货清单卡片与一键生成 (支持单项打勾排除) */}
                 {modalMissing.length > 0 && (
                   <div className="p-4 rounded-2xl bg-amber-50/85 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 shadow-soft space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-amber-950 dark:text-amber-100">
                           <ShoppingCart className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                          <span>差额买菜补货清单 · 缺少 {modalMissing.length} 样食材</span>
+                          <span>差额买菜补货清单 · 待补 {effectiveMissing.length}/{modalMissing.length} 样</span>
                         </div>
                         <p className="text-[11px] text-amber-800/80 dark:text-amber-400">
-                          从看到买到做，一键复制清单发给微信或备忘录照着买
+                          点击食材可临时划除（如已有调料），一键复制清单发微信照着买
                         </p>
                       </div>
 
                       <button
                         type="button"
                         onClick={handleCopyShoppingList}
-                        className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-medium text-xs shadow-soft transition-all flex items-center justify-center gap-1.5 shrink-0"
+                        disabled={effectiveMissing.length === 0}
+                        className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 disabled:opacity-40 text-white font-medium text-xs shadow-soft transition-all flex items-center justify-center gap-1.5 shrink-0"
                         title="一键复制买菜清单到剪贴板"
                       >
                         <Copy className="w-3.5 h-3.5" />
-                        <span>🛒 生成买菜补货清单</span>
+                        <span>🛒 复制买菜清单 ({effectiveMissing.length})</span>
                       </button>
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {modalMissing.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="px-2.5 py-1.5 rounded-lg bg-white/90 dark:bg-stone-800/90 border border-amber-200/70 dark:border-amber-900/50 flex items-center gap-2 text-xs shadow-2xs"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                          <span className="font-medium text-stone-900 dark:text-stone-100">{item.name}</span>
-                          <span className="text-[11px] text-amber-700 dark:text-amber-400 font-mono">
-                            {item.amount || '适量'}
-                          </span>
-                        </div>
-                      ))}
+                      {modalMissing.map((item, idx) => {
+                        const isExcluded = Boolean(excludedMissing[item.name]);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() =>
+                              setExcludedMissing((prev) => ({
+                                ...prev,
+                                [item.name]: !prev[item.name],
+                              }))
+                            }
+                            className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-2 text-xs transition-all cursor-pointer ${
+                              isExcluded
+                                ? 'bg-stone-100 dark:bg-stone-800/60 text-stone-400 dark:text-stone-500 line-through border-stone-200/60 dark:border-stone-700/60'
+                                : 'bg-white/90 dark:bg-stone-800/90 border-amber-200/70 dark:border-amber-900/50 text-stone-900 dark:text-stone-100 shadow-2xs hover:border-amber-400'
+                            }`}
+                            title={isExcluded ? '点击恢复待买清单' : '点击划除（家里已有）'}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                isExcluded ? 'bg-stone-300 dark:bg-stone-600' : 'bg-amber-500'
+                              }`}
+                            />
+                            <span className="font-medium">{item.name}</span>
+                            <span
+                              className={`text-[11px] font-mono ${
+                                isExcluded ? 'text-stone-400 dark:text-stone-500' : 'text-amber-700 dark:text-amber-400'
+                              }`}
+                            >
+                              {item.amount || '适量'}
+                            </span>
+                            {isExcluded && (
+                              <span className="text-[10px] text-stone-400 ml-0.5 no-underline">
+                                (已有)
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -2308,3 +2448,4 @@ export default function ShikeApp() {
     </div>
   );
 }
+

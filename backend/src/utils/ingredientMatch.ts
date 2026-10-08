@@ -119,6 +119,12 @@ function checkDirectMatch(iNorm: string, rNorm: string): boolean {
     return false;
   }
 
+  // 4. 复合调味品（鸡精/鸡粉/蚝油/鱼露/虾酱/虾油/虾皮/猪油/牛油）严禁模糊匹配为主料生鲜 (BUG-04)
+  const isCondiment = (name: string) => /鸡精|鸡粉|蚝油|鱼露|虾酱|虾油|虾皮|猪油|牛油/.test(name);
+  if (isCondiment(iNorm) !== isCondiment(rNorm)) {
+    return false;
+  }
+
   // 当且仅当某一方不在词典时才允许子串包含模糊匹配
   if (iNorm.includes(rNorm) || rNorm.includes(iNorm)) {
     return true;

@@ -6,6 +6,19 @@
 let sharedAudioCtx: AudioContext | null = null;
 
 /**
+ * 触发轻量级物理震动触觉反馈 (iOS / Android 移动端支持设备)
+ */
+export function triggerHapticFeedback(pattern: number | number[] = 15): void {
+  if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // 容错降级
+    }
+  }
+}
+
+/**
  * 获取或懒加载全局 AudioContext，并处理浏览器自动播放策略限制
  */
 function getAudioContext(): AudioContext | null {
@@ -36,6 +49,7 @@ function getAudioContext(): AudioContext | null {
  */
 export function playTimerDoneSound(): void {
   try {
+    triggerHapticFeedback([80, 60, 140]);
     const ctx = getAudioContext();
     if (!ctx) return;
 
@@ -81,8 +95,8 @@ export function playTimerDoneSound(): void {
     dongGain.gain.exponentialRampToValueAtTime(0.32, dongTime + 0.02);
     dongGain.gain.exponentialRampToValueAtTime(0.0001, dongTime + 0.85);
 
-    dongOsc.connect(dongGain);
-    dongHarmonic.connect(dongGain);
+    dongOsc.connect(dingGain);
+    dongHarmonic.connect(dingGain);
     dongGain.connect(ctx.destination);
 
     dongOsc.start(dongTime);
@@ -100,6 +114,7 @@ export function playTimerDoneSound(): void {
  */
 export function playCookSuccessSound(): void {
   try {
+    triggerHapticFeedback([40, 50, 80]);
     const ctx = getAudioContext();
     if (!ctx) return;
 
@@ -140,6 +155,7 @@ export function playCookSuccessSound(): void {
  */
 export function playShutterSound(): void {
   try {
+    triggerHapticFeedback(15);
     const ctx = getAudioContext();
     if (!ctx) return;
 

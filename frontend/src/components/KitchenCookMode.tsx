@@ -23,6 +23,7 @@ interface KitchenCookModeProps {
   onClose: () => void;
   cookingTimer: number;
   setCookingTimer: React.Dispatch<React.SetStateAction<number>>;
+  onAdjustTimer?: (deltaSec: number) => void;
   isTimerRunning: boolean;
   setIsTimerRunning: React.Dispatch<React.SetStateAction<boolean>>;
   onCook: (recipe: RecipeRecommendation) => Promise<void>;
@@ -36,6 +37,7 @@ export default function KitchenCookMode({
   onClose,
   cookingTimer,
   setCookingTimer,
+  onAdjustTimer,
   isTimerRunning,
   setIsTimerRunning,
   onCook,
@@ -50,7 +52,11 @@ export default function KitchenCookMode({
   const currentStep = recipe.instructions[currentStepIndex] || '';
 
   const addTimerSeconds = (sec: number) => {
-    setCookingTimer((prev) => prev + sec);
+    if (onAdjustTimer) {
+      onAdjustTimer(sec);
+    } else {
+      setCookingTimer((prev) => prev + sec);
+    }
   };
 
   const handleNextStep = () => {
@@ -356,3 +362,4 @@ export default function KitchenCookMode({
     </div>
   );
 }
+
