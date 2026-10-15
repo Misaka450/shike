@@ -1,5 +1,5 @@
 # ---------- 构建阶段 ----------
-FROM node:22-slim AS builder
+FROM node:25-slim AS builder
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 # ---------- 运行阶段 ----------
-FROM node:22-slim AS runner
+FROM node:25-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
