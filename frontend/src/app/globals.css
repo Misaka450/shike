@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 :root {
   --background: #FAFAF7;
@@ -255,3 +254,4 @@ body::before {
 .card-spring-hover:active {
   transform: scale(0.985);
 }
+
