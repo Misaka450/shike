@@ -269,36 +269,26 @@ export function initSeedRecipes(): void {
 }
 
 /**
- * 菜谱内存缓存（PER-02）
- * 旧实现每次推荐都要把全部菜谱读出来并逐条 JSON.parse 解析食材与步骤，
- * 随着菜谱数量增长，这个开销会线性放大。这里改为只在首次访问时解析一次。
- *
- * ownerById 与菜谱内容一起缓存：旧实现判断「这道 AI 菜谱属于谁」时，
- * 每道菜谱都要单独查一次数据库（N+1 查询），列表接口里放大得非常明显。
+ * 内置菜谱内存缓存（PER-02 / ARC-01）
+ * 系统内置菜谱数量固定（约 290 道），解析后常驻内存，供推荐引擎免数据库查询极速计算。
+ * 用户的私有 AI 菜谱不再全量常驻全局内存，彻底避免多用户场景下内存暴涨击穿 Node.js 堆栈。
  */
-let recipeCache: {
-  recipes: Recipe[];
-  ownerById: Map<string, string | null>;
-} | null = null;
+let builtinRecipesCache: Recipe[] | null = null;
 
-/** 菜谱数据发生变化（例如新增 AI 菜谱）时清空缓存，下次访问自动重建 */
+/** 菜谱数据发生变化时清空内置菜谱缓存（例如初始化播种） */
 export function invalidateRecipeCache(): void {
-  recipeCache = null;
+  builtinRecipesCache = null;
 }
 
-/** 读取全部菜谱（带缓存），仅在数据变更或首次访问时真正查询数据库 */
-function getAllRecipes(): Recipe[] {
-  if (!recipeCache) {
+/** 读取内置菜谱（带内存缓存），仅在首次访问或播种时查询数据库 */
+export function getBuiltinRecipes(): Recipe[] {
+  if (!builtinRecipesCache) {
     const rows = db
-      .prepare('SELECT * FROM recipes ORDER BY name ASC')
+      .prepare("SELECT * FROM recipes WHERE owner_id IS NULL AND id NOT LIKE 'ai-recipe-%' ORDER BY name ASC")
       .all() as Array<Record<string, unknown>>;
-    const ownerById = new Map<string, string | null>();
-    for (const row of rows) {
-      ownerById.set(String(row.id), (row.owner_id as string | null) ?? null);
-    }
-    recipeCache = { recipes: rows.map(rowToRecipe), ownerById };
+    builtinRecipesCache = rows.map(rowToRecipe);
   }
-  return recipeCache.recipes;
+  return builtinRecipesCache;
 }
 
 /** 安全解析 JSON 字符串：数据损坏时回退到默认值，避免单个脏数据让整个接口报 500 */
@@ -332,42 +322,98 @@ export function rowToRecipe(row: any): Recipe {
 }
 
 /**
- * 列出菜谱
- * 可见性规则（NEW-01/02 修复）：
- * - 内置菜谱（owner_id 为 NULL）对所有人可见；
- * - AI 定制菜谱是用户私有内容，只有其生成者（owner_id 匹配）能看到。
- *
- * @param filters 菜系/难度过滤
- * @param userId  当前登录用户；传入时只返回「内置菜谱 + 该用户自己的 AI 菜谱」。
- *                不传时只返回内置菜谱（供内部纯内置场景使用，例如推荐引擎）。
+ * 分页列出菜谱（SQL 层面下沉过滤与物理分页，修复 ARC-01）
+ * 避免把全部用户的私有 AI 菜谱整体拉入 Node.js 内存堆。
+ */
+export function listRecipesPaged(
+  filters: { cuisine?: string; difficulty?: string } | undefined,
+  userId: string | undefined,
+  limit: number = 50,
+  offset: number = 0
+): { recipes: Recipe[]; total: number } {
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  // 可见性：内置菜谱（owner_id IS NULL 且非 ai-recipe-）对所有人可见；AI 菜谱仅本人可见
+  if (userId) {
+    conditions.push("((owner_id IS NULL AND id NOT LIKE 'ai-recipe-%') OR owner_id = ?)");
+    params.push(userId);
+  } else {
+    conditions.push("(owner_id IS NULL AND id NOT LIKE 'ai-recipe-%')");
+  }
+
+  if (filters?.cuisine) {
+    conditions.push('cuisine = ?');
+    params.push(filters.cuisine);
+  }
+  if (filters?.difficulty) {
+    conditions.push('difficulty = ?');
+    params.push(filters.difficulty);
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+  const countRow = db
+    .prepare(`SELECT COUNT(*) as total FROM recipes ${whereClause}`)
+    .get(...params) as { total: number } | undefined;
+  const total = countRow?.total || 0;
+
+  // AI 菜谱排在最前（用户优先看自己的定制），其次按创建时间倒序
+  const rows = db
+    .prepare(`
+      SELECT * FROM recipes ${whereClause}
+      ORDER BY CASE WHEN id LIKE 'ai-recipe-%' THEN 0 ELSE 1 END, created_at DESC, id DESC
+      LIMIT ? OFFSET ?
+    `)
+    .all(...params, limit, offset) as Array<Record<string, unknown>>;
+
+  return {
+    recipes: rows.map(rowToRecipe),
+    total,
+  };
+}
+
+/**
+ * 列出菜谱（兼容全量返回，如单元测试场景）
  */
 export function listRecipes(
   filters?: { cuisine?: string; difficulty?: string },
   userId?: string
 ): Recipe[] {
-  // 从内存缓存读取全量菜谱，归属与分类过滤在内存中完成
-  return getAllRecipes().filter((recipe) => {
-    if (filters?.cuisine && recipe.cuisine !== filters.cuisine) return false;
-    if (filters?.difficulty && recipe.difficulty !== filters.difficulty) return false;
-    return true;
-  }).filter((recipe) => {
-    // 需要查询数据库确认归属（缓存的是菜谱内容，不含 owner_id）
-    if (!recipe.id.startsWith('ai-recipe-')) return true; // 内置菜谱
-    if (!userId) return false; // 未指定用户：调用方只想要内置菜谱
-    return getRecipeOwnerId(recipe.id) === userId;
-  });
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  if (userId) {
+    conditions.push("((owner_id IS NULL AND id NOT LIKE 'ai-recipe-%') OR owner_id = ?)");
+    params.push(userId);
+  } else {
+    conditions.push("(owner_id IS NULL AND id NOT LIKE 'ai-recipe-%')");
+  }
+
+  if (filters?.cuisine) {
+    conditions.push('cuisine = ?');
+    params.push(filters.cuisine);
+  }
+  if (filters?.difficulty) {
+    conditions.push('difficulty = ?');
+    params.push(filters.difficulty);
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+  const rows = db
+    .prepare(`
+      SELECT * FROM recipes ${whereClause}
+      ORDER BY CASE WHEN id LIKE 'ai-recipe-%' THEN 0 ELSE 1 END, created_at DESC, id DESC
+    `)
+    .all(...params) as Array<Record<string, unknown>>;
+
+  return rows.map(rowToRecipe);
 }
 
 /**
  * 查询菜谱归属用户；内置菜谱返回 null，不存在返回 undefined
- *
- * 【修复 PER-05】旧实现每判断一道 AI 菜谱的归属就单独发一条 SELECT，
- * 在列表接口里是典型的 N+1 查询：菜谱越多，请求越慢。
- * 现在优先从缓存的 ownerById 直接取，只有缓存里查无此 ID
- * （例如刚被并发写入、缓存尚未重建）才回退一次数据库查询。
  */
-// 延迟到首次使用时再 prepare：数据库迁移已改为由入口显式执行，
-// 若在模块加载时就 prepare，会在表尚未创建时直接抛错（测试环境尤为明显）
 let ownerStmt: ReturnType<typeof db.prepare> | null = null;
 function getOwnerStmt(): ReturnType<typeof db.prepare> {
   if (!ownerStmt) {
@@ -377,9 +423,6 @@ function getOwnerStmt(): ReturnType<typeof db.prepare> {
 }
 
 function getRecipeOwnerId(id: string): string | null | undefined {
-  if (recipeCache && recipeCache.ownerById.has(id)) {
-    return recipeCache.ownerById.get(id) ?? null;
-  }
   const row = getOwnerStmt().get(id) as { owner_id: string | null } | undefined;
   return row ? row.owner_id : undefined;
 }
@@ -449,22 +492,23 @@ export function recommendRecipes(
   inventory: InventoryItem[],
   query?: Partial<RecommendQuery>
 ): RecipeRecommendation[] {
-  const allRecipes = listRecipes({
-    cuisine: query?.cuisine,
-    difficulty: query?.difficulty,
+  // 推荐菜谱 100% 仅来自于已审核的固定菜谱库，从内置缓存高速读取并过滤
+  const allRecipes = getBuiltinRecipes().filter((recipe) => {
+    if (query?.cuisine && recipe.cuisine !== query.cuisine) return false;
+    if (query?.difficulty && recipe.difficulty !== query.difficulty) return false;
+    return true;
   });
 
   const activeInv = inventory.filter((item) => item.status === 'active');
-  const invNames = activeInv.map((i) => i.name.trim());
+  // 【防御性保护 ARC-02】按临期紧急程度优先截断前 100 种参与笛卡尔积评分计算，防止超大库存阻塞单线程事件循环
+  const prioritizedInv = [...activeInv]
+    .sort((a, b) => (a.days_remaining ?? 99) - (b.days_remaining ?? 99))
+    .slice(0, 100);
+  const invNames = prioritizedInv.map((i) => i.name.trim());
 
   const recommendations: RecipeRecommendation[] = [];
 
   for (const recipe of allRecipes) {
-    // 常规推荐列表绝不混入任何历史生成的 AI 菜谱，100% 只来自于严谨量化、真实审核的固定菜谱库
-    if (recipe.id.startsWith('ai-recipe-')) {
-      continue;
-    }
-
     if (query?.max_cook_time && (recipe.cook_time + recipe.prep_time) > query.max_cook_time) {
       continue;
     }
@@ -474,8 +518,8 @@ export function recommendRecipes(
     let urgencyScoreBoost = 0;
 
     for (const rIng of recipe.ingredients) {
-      // Find matching inventory item
-      const matchedInv = activeInv.find((inv) => isIngredientMatch(inv.name, rIng.name));
+      // Find matching inventory item in prioritized active inventory
+      const matchedInv = prioritizedInv.find((inv) => isIngredientMatch(inv.name, rIng.name));
 
       if (matchedInv) {
         matchedDetails.push({
@@ -803,12 +847,16 @@ export function cookRecipe(
 
   const now = new Date().toISOString();
 
-  // 【修复 ARC-10】扣减库存与写入烹饪历史必须原子完成：
-  // 旧实现分两步执行，中途一旦出错就会出现"食材被扣了、却没有烹饪记录"的数据不一致。
+  // 【修复 ARC-10 / LOG-04】扣减库存与写入烹饪历史必须原子完成；支持按需精确扣库，避免粗暴全额扣尽大包装食材
   const runCookTransaction = db.transaction(() => {
     let consumed = 0;
     if (options.auto_consume_ingredients && consumedItemIds.length > 0) {
-      consumed = markItemsAsConsumed(consumedItemIds, userId);
+      const targetIds = Array.isArray(options.consume_item_ids)
+        ? consumedItemIds.filter((id) => options.consume_item_ids!.includes(id))
+        : consumedItemIds;
+      if (targetIds.length > 0) {
+        consumed = markItemsAsConsumed(targetIds, userId);
+      }
     }
 
     const info = db

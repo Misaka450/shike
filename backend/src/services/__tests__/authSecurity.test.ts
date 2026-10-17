@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isPrivateIp, getClientIp } from '../authSecurity.js';
+import { isPrivateIp, getClientIp, createCaptcha, verifyAndConsumeCaptcha } from '../authSecurity.js';
 import { config } from '../../config.js';
 import { app } from '../../app.js';
 
@@ -83,5 +83,24 @@ describe('authSecurity & IP识别加固 (SEC-01, SEC-02, SEC-04)', () => {
       },
     });
     assert.equal(resAllowed.headers.get('access-control-allow-origin'), allowedOrigin);
+  });
+
+  it('createCaptcha 采用纯矢量路径渲染，彻底杜绝纯文本 <text> 正则提取 (SEC-01)', () => {
+    const { captcha_key, svg } = createCaptcha();
+    assert.ok(captcha_key.startsWith('cap_'));
+    assert.ok(svg.includes('<svg'));
+    assert.ok(svg.includes('<path'));
+
+    // 核心安全断言：严禁包含任何 <text> 标签
+    const textMatches = [...svg.matchAll(/<text[^>]*>([^<]+)<\/text>/g)];
+    assert.equal(textMatches.length, 0, 'SVG 验证码中绝不能包含明文 <text> 标签');
+  });
+
+  it('verifyAndConsumeCaptcha 正确校验且一次性作废 (SEC-03)', () => {
+    const { captcha_key } = createCaptcha();
+    // 错误输入
+    assert.equal(verifyAndConsumeCaptcha(captcha_key, 'wrong_code'), false);
+    // 已被消费，再次用任何码都应返回 false
+    assert.equal(verifyAndConsumeCaptcha(captcha_key, 'wrong_code'), false);
   });
 });

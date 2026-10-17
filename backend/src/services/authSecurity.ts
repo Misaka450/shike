@@ -11,11 +11,34 @@ interface CaptchaEntry {
 }
 
 const captchaStore = new Map<string, CaptchaEntry>();
+/** 内存验证码最大保存条数，防止攻击者无节制调用打爆堆内存 (SEC-03) */
+const MAX_CAPTCHA_STORE_SIZE = 2000;
 
 /** 生成 [min, max] 闭区间内的密码学安全随机整数（安全场景不可使用 Math.random） */
 function secureRandomInt(min: number, max: number): number {
   return crypto.randomInt(min, max + 1);
 }
+
+/**
+ * 字符矢量笔画字典（彻底移除纯文本 <text> 标签，杜绝正则表达式秒破漏洞 - SEC-01）
+ * 归一化在 10x16 视口内，通过原生矢量路径 <path> 渲染
+ */
+const GLYPH_PATHS: Record<string, string> = {
+  '0': 'M 2,3 C 2,1 8,1 8,3 V 13 C 8,15 2,15 2,13 Z',
+  '1': 'M 3,4 L 6,1 V 15 M 2,15 H 10',
+  '2': 'M 2,4 C 2,1 8,1 8,4 C 8,8 2,10 2,15 H 9',
+  '3': 'M 2,2 H 8 L 4,7 C 7,7 9,8 9,11 C 9,14 6,15 2,14',
+  '4': 'M 7,15 V 1 M 1,9 L 7,1 V 10 H 10',
+  '5': 'M 8,2 H 2 V 7 C 4,6 8,6 8,10 C 8,14 5,15 2,14',
+  '6': 'M 7,3 C 5,1 2,3 2,8 C 2,13 8,14 8,10 C 8,6 2,7 2,8',
+  '7': 'M 1,2 H 9 L 4,15',
+  '8': 'M 5,8 C 2,8 2,2 5,2 C 8,2 8,8 5,8 C 2,8 2,14 5,14 C 8,14 8,8 5,8 Z',
+  '9': 'M 3,13 C 5,15 8,13 8,8 C 8,3 2,2 2,6 C 2,10 8,9 8,8',
+  '+': 'M 5,3 V 13 M 0,8 H 10',
+  '-': 'M 1,8 H 9',
+  '=': 'M 1,6 H 9 M 1,10 H 9',
+  '?': 'M 2,4 C 2,1 8,1 8,4 C 8,7 5,7 5,10 M 5,13.5 V 15',
+};
 
 // Clean up expired captchas periodically
 const captchaCleanupInterval = setInterval(() => {
@@ -29,6 +52,19 @@ const captchaCleanupInterval = setInterval(() => {
 captchaCleanupInterval.unref();
 
 export function createCaptcha(): { captcha_key: string; svg: string } {
+  // 检查并淘汰超限缓存，防止内存无限膨胀 (SEC-03)
+  if (captchaStore.size >= MAX_CAPTCHA_STORE_SIZE) {
+    const now = Date.now();
+    let count = 0;
+    for (const [key, item] of captchaStore.entries()) {
+      if (now > item.expiresAt || count < 200) {
+        captchaStore.delete(key);
+        count++;
+      }
+      if (captchaStore.size < MAX_CAPTCHA_STORE_SIZE * 0.8) break;
+    }
+  }
+
   const isPlus = secureRandomInt(0, 99) >= 35;
   let a = secureRandomInt(1, 12);
   let b = secureRandomInt(1, 9);
@@ -69,17 +105,20 @@ export function createCaptcha(): { captcha_key: string; svg: string } {
     dots += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" opacity="0.35"/>`;
   }
 
-  // Text characters with slight rotation and offsets
+  // 矢量路径渲染字符（不含任何 <text> 标签，抗爬虫与简单正则提取）
   const startX = 14;
   const stepX = (width - 28) / expression.length;
   let charsSvg = '';
   for (let i = 0; i < expression.length; i++) {
     const char = expression[i];
+    if (char === ' ') continue;
+    const pathData = GLYPH_PATHS[char];
+    if (!pathData) continue;
     const x = startX + i * stepX;
-    const y = 25 + secureRandomInt(-2, 2);
-    const rot = (secureRandomInt(-70, 70) / 10).toFixed(1);
+    const y = 12 + secureRandomInt(-2, 2);
+    const rot = (secureRandomInt(-60, 60) / 10).toFixed(1);
     const charColor = ['#0f172a', '#047857', '#0369a1', '#b45309', '#4338ca'][i % 5];
-    charsSvg += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="monospace, Arial, sans-serif" font-weight="700" font-size="18" fill="${charColor}" transform="rotate(${rot}, ${x.toFixed(1)}, ${y.toFixed(1)})">${char}</text>`;
+    charsSvg += `<g transform="translate(${x.toFixed(1)}, ${y.toFixed(1)}) rotate(${rot}, 5, 8)"><path d="${pathData}" fill="none" stroke="${charColor}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" /></g>`;
   }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;user-select:none;cursor:pointer;display:block;"><title>点击更换验证码</title>${lines}${dots}${charsSvg}</svg>`;

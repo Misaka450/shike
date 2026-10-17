@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateDaysRemaining, computeUrgency } from '../urgency.js';
+import { formatLocalDate } from '../../services/inventoryService.js';
 
 /** 把日期格式化为 YYYY-MM-DD（按本地时区，避免时区偏移导致断言飘移） */
 function toDateString(date: Date): string {
@@ -38,6 +39,11 @@ describe('calculateDaysRemaining（剩余保质期天数计算）', () => {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     assert.equal(calculateDaysRemaining(todayStr), 0);
+  });
+
+  it('formatLocalDate 生成的日期与本地时间完全对应，保证跨时区计算一致 (LOG-02)', () => {
+    const d = new Date(2026, 9, 18, 1, 30, 0); // 2026-10-18 01:30 本地时间
+    assert.equal(formatLocalDate(d), '2026-10-18');
   });
 });
 

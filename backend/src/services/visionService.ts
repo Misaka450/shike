@@ -1,5 +1,34 @@
+import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { FridgeScanResult, FridgeScanResultSchema } from '../schemas/index.js';
+
+interface VisionCacheEntry {
+  result: FridgeScanResult;
+  expiresAt: number;
+}
+
+/**
+ * 识图结果本地内存极速缓存
+ * 容量上限 200 条，TTL 15 分钟。多次上传相同图片或重试时秒级 0ms 响应并节省 100% CPA 视觉 Token。
+ */
+const visionCache = new Map<string, VisionCacheEntry>();
+const VISION_CACHE_MAX_SIZE = 200;
+const VISION_CACHE_TTL_MS = 15 * 60 * 1000;
+
+// 定期清理过期识图缓存
+const visionCacheCleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [key, item] of visionCache.entries()) {
+    if (now > item.expiresAt) {
+      visionCache.delete(key);
+    }
+  }
+}, 60 * 1000);
+visionCacheCleanupInterval.unref();
+
+export function clearVisionCache(): void {
+  visionCache.clear();
+}
 
 const FRIDGE_SYSTEM_PROMPT = `你是一位专业的智能冰箱食材识别专家。请仔细分析这张冰箱内部或食材的照片，准确识别出其中的所有食材（包括蔬菜、肉禽、蛋奶、水果、豆制品、调料、水产、熟食等）。
 
@@ -131,6 +160,13 @@ export async function scanFridgeImage(
   mimeType: string = 'image/jpeg',
   mode: ScanMode = 'fridge'
 ): Promise<FridgeScanResult> {
+  // 1. 计算图片内容与模式的 SHA256 唯一摘要，优先从极速缓存返回
+  const imageHash = crypto.createHash('sha256').update(imageBuffer).update(mode).digest('hex');
+  const cached = visionCache.get(imageHash);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.result;
+  }
+
   const base64Image = imageBuffer.toString('base64');
 
   // 模型名单来自配置（CPA_VISION_MODELS，逗号分隔），无需改代码即可切换候选模型
@@ -172,5 +208,17 @@ export async function scanFridgeImage(
   }
 
   // Validate and coerce using Zod schema
-  return FridgeScanResultSchema.parse(parsed);
+  const validated = FridgeScanResultSchema.parse(parsed);
+
+  // 2. 写入本地识图极速缓存（淘汰超出上限的最老项）
+  if (visionCache.size >= VISION_CACHE_MAX_SIZE) {
+    const oldestKey = visionCache.keys().next().value;
+    if (oldestKey) visionCache.delete(oldestKey);
+  }
+  visionCache.set(imageHash, {
+    result: validated,
+    expiresAt: Date.now() + VISION_CACHE_TTL_MS,
+  });
+
+  return validated;
 }

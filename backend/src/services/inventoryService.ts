@@ -7,6 +7,29 @@ import {
 // 保质期相关计算已抽到 utils 下，方便单独做单元测试（不需要连数据库）
 import { calculateDaysRemaining, computeUrgency } from '../utils/urgency.js';
 
+export class InventoryError extends Error {
+  statusCode: number;
+  code: string;
+
+  constructor(message: string, statusCode: number = 400, code: string = 'BAD_REQUEST') {
+    super(message);
+    this.name = 'InventoryError';
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
+/** 单用户最大在库活跃食材数量上限，防止单账号恶意刷爆数据库 (ARC-02) */
+export const MAX_ACTIVE_ITEMS_PER_USER = 300;
+
+/** 格式化本地日期为 YYYY-MM-DD，杜绝 toISOString() 因 UTC 转换导致跨时区少算 1 天 (LOG-02) */
+export function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function rowToInventoryItem(row: any): InventoryItem {
   const daysRemaining = calculateDaysRemaining(row.expiry_date);
   const urgencyLevel = computeUrgency(daysRemaining);
@@ -53,6 +76,19 @@ export function batchAddInventory(
   items: CreateInventoryItemInput[],
   userId: string
 ): InventoryItem[] {
+  // 检查当前用户的在库食材上限 (ARC-02)
+  const currentCountRow = db
+    .prepare("SELECT COUNT(*) as count FROM inventory_items WHERE user_id = ? AND status = 'active'")
+    .get(userId) as { count: number } | undefined;
+  const currentCount = currentCountRow?.count || 0;
+  if (currentCount + items.length > MAX_ACTIVE_ITEMS_PER_USER) {
+    throw new InventoryError(
+      `冰箱在库食材数量已达上限（最多 ${MAX_ACTIVE_ITEMS_PER_USER} 种，当前已有 ${currentCount} 种），请先清理或吃完已存食材`,
+      400,
+      'INVENTORY_LIMIT_EXCEEDED'
+    );
+  }
+
   const now = new Date();
   const addedAt = now.toISOString();
 
@@ -75,7 +111,8 @@ export function batchAddInventory(
       if (!expiryDate) {
         const exp = new Date(now);
         exp.setDate(exp.getDate() + storageDays);
-        expiryDate = exp.toISOString().slice(0, 10); // YYYY-MM-DD
+        // 【修复 LOG-02】使用本地时间日期组件格式化，防止 UTC 转换在每天凌晨导致保质期回退 1 天
+        expiryDate = formatLocalDate(exp);
       }
 
       const info = insertStmt.run({

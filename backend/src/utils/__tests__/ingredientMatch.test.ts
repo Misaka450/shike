@@ -91,4 +91,25 @@ describe('isIngredientMatch（食材名匹配）', () => {
     assert.equal(isIngredientMatch('优质蚝油', '蚝油'), true);
     assert.equal(isIngredientMatch('鸡精', '鸡精'), true);
   });
+
+  it('禽蛋与禽肉主料严禁互通模糊误匹配 (LOG-03 修复)', () => {
+    // 蛋类不应匹配鸡/鸭/鹅禽肉
+    assert.equal(isIngredientMatch('鸡蛋', '鸡'), false);
+    assert.equal(isIngredientMatch('鸡', '鸡蛋'), false);
+    assert.equal(isIngredientMatch('鸡蛋', '鸡肉'), false);
+    assert.equal(isIngredientMatch('土鸡蛋', '鸡'), false);
+    assert.equal(isIngredientMatch('土鸡蛋', '童子鸡'), false);
+    assert.equal(isIngredientMatch('草鸡蛋', '公鸡'), false);
+    assert.equal(isIngredientMatch('鸭蛋', '鸭'), false);
+    assert.equal(isIngredientMatch('鸭', '鸭蛋'), false);
+    assert.equal(isIngredientMatch('鸭蛋', '鸭肉'), false);
+
+    // 蛋类同义词组内部应正常匹配
+    assert.equal(isIngredientMatch('鸡蛋', '蛋'), true);
+    assert.equal(isIngredientMatch('土鸡蛋', '鸡蛋'), true);
+    assert.equal(isIngredientMatch('鲜蛋', '鸡蛋'), true);
+    assert.equal(isIngredientMatch('草鸡蛋', '鸡蛋'), true);
+    assert.equal(isIngredientMatch('洋鸡蛋', '鸡蛋'), true);
+    assert.equal(isIngredientMatch('荷包蛋', '鸡蛋'), true);
+  });
 });

@@ -388,12 +388,16 @@ export async function generateAiRecipes(
 
 export async function cookRecipe(
   recipeId: string,
-  autoConsume: boolean = true
+  autoConsume: boolean = true,
+  consumeItemIds?: number[]
 ): Promise<CookResult> {
   return request<CookResult>(`/api/recipes/${recipeId}/cook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ auto_consume_ingredients: autoConsume }),
+    body: JSON.stringify({
+      auto_consume_ingredients: autoConsume,
+      consume_item_ids: consumeItemIds,
+    }),
   });
 }
 

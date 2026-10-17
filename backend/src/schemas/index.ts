@@ -175,6 +175,7 @@ export type RecipeListQuery = z.output<typeof RecipeListQuerySchema>;
 export const CookRecipeRequestSchema = z.object({
   notes: z.string().optional(),
   auto_consume_ingredients: z.boolean().default(true),
+  consume_item_ids: z.array(z.number()).optional(),
 });
 
 export type CookRecipeRequest = z.input<typeof CookRecipeRequestSchema>;

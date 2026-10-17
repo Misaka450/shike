@@ -107,6 +107,10 @@ export default function ShikeApp() {
   // 灵感流场景胶囊筛选
   type RecipeFilterKey = 'all' | 'quick' | 'soup' | 'light' | 'urgent';
   const [recipeFilter, setRecipeFilter] = useState<RecipeFilterKey>('all');
+  const [recipeSearch, setRecipeSearch] = useState('');
+
+  // 烹饪扣减在库食材精确选择状态 (解决 LOG-04 粗暴全额扣尽痛点)
+  const [deductItemIds, setDeductItemIds] = useState<Record<number, boolean>>({});
 
   // 灶台大字专注下厨模式状态
   const [isKitchenCookMode, setIsKitchenCookMode] = useState<boolean>(false);
@@ -147,24 +151,22 @@ export default function ShikeApp() {
     };
   }, [recipes]);
 
-  // 经场景胶囊实时平滑过滤后的推荐列表
+  // 经场景胶囊与搜索关键词实时平滑过滤后的推荐列表
   const displayedRecipes = useMemo(() => {
+    let list = recipes;
     if (recipeFilter === 'quick') {
-      return recipes.filter((r) => (r.cook_time || 0) <= 15);
-    }
-    if (recipeFilter === 'soup') {
-      return recipes.filter(
+      list = list.filter((r) => (r.cook_time || 0) <= 15);
+    } else if (recipeFilter === 'soup') {
+      list = list.filter(
         (r) => (r.category && r.category.includes('汤')) || (r.name && r.name.includes('汤'))
       );
-    }
-    if (recipeFilter === 'light') {
-      return recipes.filter((r) => {
+    } else if (recipeFilter === 'light') {
+      list = list.filter((r) => {
         const text = `${r.category || ''} ${r.cuisine || ''} ${r.name || ''}`;
         return /沙拉|轻食|素|减脂|低卡/.test(text);
       });
-    }
-    if (recipeFilter === 'urgent') {
-      return recipes.filter(
+    } else if (recipeFilter === 'urgent') {
+      list = list.filter(
         (r) =>
           (r.urgency_boost && r.urgency_boost > 0) ||
           (r.matched_ingredients &&
@@ -173,8 +175,20 @@ export default function ShikeApp() {
             ))
       );
     }
-    return recipes;
-  }, [recipes, recipeFilter]);
+
+    if (recipeSearch.trim()) {
+      const q = recipeSearch.trim().toLowerCase();
+      list = list.filter((r) => {
+        const nameHit = r.name.toLowerCase().includes(q);
+        const catHit = (r.category || '').toLowerCase().includes(q);
+        const cuisineHit = (r.cuisine || '').toLowerCase().includes(q);
+        const ingHit = r.ingredients.some((ing) => ing.name.toLowerCase().includes(q));
+        return nameHit || catHit || cuisineHit || ingHit;
+      });
+    }
+
+    return list;
+  }, [recipes, recipeFilter, recipeSearch]);
 
   // User Auth State
   const [userProfile, setUserProfile] = useState<{
@@ -660,14 +674,34 @@ export default function ShikeApp() {
     }
   };
 
-  // Cook Recipe & Deduct
+  // 烹饪后更新在库食材选择列表 (默认全选，可由用户按需取消大包装食材)
+  useEffect(() => {
+    if (selectedRecipe?.matched_ingredients) {
+      const initial: Record<number, boolean> = {};
+      selectedRecipe.matched_ingredients.forEach((m) => {
+        initial[m.inventory_item_id] = true;
+      });
+      setDeductItemIds(initial);
+    }
+  }, [selectedRecipe]);
+
+  // Cook Recipe & Deduct (支持按需精确扣库，解决 LOG-04 粗暴全额扣尽痛点)
   const handleCook = async (recipe: RecipeRecommendation) => {
     try {
-      await cookRecipe(recipe.id, true);
+      const targetIds = Object.entries(deductItemIds)
+        .filter(([_, checked]) => checked)
+        .map(([id]) => Number(id));
+
+      await cookRecipe(recipe.id, true, targetIds.length > 0 ? targetIds : undefined);
       setIsCookingSuccess(true);
       playCookSuccessSound();
-      setCookingMessage(`🎉 成功烹饪「${recipe.name}」，已自动扣减在库消耗食材！`);
-      showToast(`已扣减「${recipe.name}」所用食材`);
+      const deductCount = targetIds.length;
+      setCookingMessage(
+        deductCount > 0
+          ? `🎉 成功烹饪「${recipe.name}」，已同步扣减 ${deductCount} 种在库食材！`
+          : `🎉 成功烹饪「${recipe.name}」！未扣除食材库存`
+      );
+      showToast(deductCount > 0 ? `已扣减「${recipe.name}」所选食材` : `已记录「${recipe.name}」烹饪`);
       await refreshData();
       setTimeout(() => {
         setSelectedRecipe(null);
@@ -680,6 +714,23 @@ export default function ShikeApp() {
     } catch (err: any) {
       showToast(err.message || '扣库失败');
       setIsCookingSuccess(false);
+    }
+  };
+
+  // 批量清理已过期食材
+  const handleBatchCleanExpired = async () => {
+    const expiredItems = inventory.filter((item) => item.urgency_level === 'red');
+    if (expiredItems.length === 0) return;
+    if (!window.confirm(`确定将已到期的 ${expiredItems.length} 件食材一并移出冰箱吗？`)) return;
+
+    try {
+      for (const item of expiredItems) {
+        await deleteInventoryItem(item.id);
+      }
+      showToast(`已批量移出 ${expiredItems.length} 件到期食材`);
+      await refreshData();
+    } catch (err: any) {
+      showToast(err.message || '清理失败');
     }
   };
 
@@ -734,6 +785,7 @@ export default function ShikeApp() {
       <header className="sticky top-0 z-40 bg-[#FAFAF7]/85 dark:bg-[#141514]/85 backdrop-blur-md border-b border-[#1C1D1B]/[0.06] dark:border-white/[0.08] px-4 lg:px-8 py-2.5 sm:py-3.5 transition-colors">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/images/logo.webp"
               alt="食刻 AI Logo"
@@ -938,6 +990,28 @@ export default function ShikeApp() {
               </div>
             </div>
 
+            {/* 菜谱即时检索输入栏 (Recipe Search) */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={recipeSearch}
+                onChange={(e) => setRecipeSearch(e.target.value)}
+                placeholder="搜索菜名、食材主料（如西红柿、鸡翅、豆腐）或菜系风格..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-white dark:bg-[#1E201D] border border-[#1C1D1B]/[0.06] dark:border-white/[0.08] text-xs text-stone-800 dark:text-stone-200 placeholder:text-stone-400 focus:outline-none focus:border-forest-600 dark:focus:border-forest-400 shadow-soft transition-colors"
+              />
+              {recipeSearch && (
+                <button
+                  type="button"
+                  onClick={() => setRecipeSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-300 flex items-center justify-center text-[10px] hover:bg-stone-300 transition-colors"
+                  title="清空搜索"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
+
             {/* 灵感流智能场景横滑筛选胶囊 (Contextual Filter Pills) */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
               {[
@@ -1086,6 +1160,7 @@ export default function ShikeApp() {
                     <div className="relative mb-4">
                       {/* 菜品封面环境氛围背光 (Ambient Color Glow) - 投射大半径高斯模糊漫射光 */}
                       <div className="absolute -inset-1.5 rounded-2xl overflow-hidden pointer-events-none blur-xl opacity-25 group-hover:opacity-45 transition-opacity duration-500">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={recipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
                           alt=""
@@ -1097,6 +1172,7 @@ export default function ShikeApp() {
                       </div>
 
                       <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-800">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={recipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
                           alt={recipe.name}
@@ -1333,6 +1409,7 @@ export default function ShikeApp() {
               ) : !isCompressing && previewUrl ? (
                 <div className="space-y-4">
                   <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800 max-h-[360px] mx-auto border border-stone-200/80 dark:border-stone-700">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={previewUrl} alt="预览图片" className="w-full h-full object-cover" />
 
                     {/* 压缩体积优化微标签 */}
@@ -1572,13 +1649,25 @@ export default function ShikeApp() {
                   智能赏味期三级温润提醒，单手触达即可标记烹饪消耗
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-forest-900 dark:bg-forest-700 hover:bg-forest-800 text-white text-xs font-medium shadow-soft transition-all active:scale-95"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>手动录入</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {summary.red_urgent > 0 && (
+                  <button
+                    onClick={handleBatchCleanExpired}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium border border-rose-200/60 dark:border-rose-800/40 shadow-xs transition-all active:scale-95"
+                    title="一键将已到期食材移出冰箱"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                    <span>清理到期 ({summary.red_urgent})</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-forest-900 dark:bg-forest-700 hover:bg-forest-800 text-white text-xs font-medium shadow-soft transition-all active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>手动录入</span>
+                </button>
+              </div>
             </div>
 
             {/* 冰箱物理分层收纳地图 (Interactive Storage Twin) */}
@@ -1801,6 +1890,7 @@ export default function ShikeApp() {
           <div className="w-full max-w-2xl bg-white dark:bg-[#1E201D] rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-modal border border-[#1C1D1B]/[0.08] dark:border-white/[0.08]">
             {/* Modal Header */}
             <div className="relative aspect-[16/9] sm:aspect-[21/9] bg-stone-100 dark:bg-stone-800">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedRecipe.image_url || '/images/dishes/recipe_tomato_egg.webp'}
                 alt={selectedRecipe.name}
@@ -2076,38 +2166,89 @@ export default function ShikeApp() {
             </div>
 
             {/* Modal Bottom Action */}
-            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-[#FAFAF7] dark:bg-[#141514] flex flex-col sm:flex-row gap-3">
-              {selectedRecipe.id.startsWith('ai-recipe-') && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteRecipe(selectedRecipe.id)}
-                  className="py-3 px-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 active:scale-98 text-rose-600 dark:text-rose-300 font-medium text-xs sm:text-sm border border-rose-200/80 dark:border-rose-800/50 transition-all flex items-center justify-center gap-1.5 shadow-soft"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>删除此 AI 菜谱</span>
-                </button>
+            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-[#FAFAF7] dark:bg-[#141514] space-y-3">
+              {/* 精确按需扣库选择区 (解决 LOG-04 粗暴全额扣尽痛点) */}
+              {selectedRecipe.matched_ingredients && selectedRecipe.matched_ingredients.length > 0 && (
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1A1C19] border border-stone-200/60 dark:border-stone-800/60 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-forest-600 dark:text-forest-400" />
+                      <span>本次消耗扣除在库食材（点击可取消未用完项）：</span>
+                    </span>
+                    <span className="text-[11px] text-stone-400 font-mono">
+                      扣除 {Object.values(deductItemIds).filter(Boolean).length}/{selectedRecipe.matched_ingredients.length} 样
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRecipe.matched_ingredients.map((m) => {
+                      const isChecked = deductItemIds[m.inventory_item_id] !== false;
+                      return (
+                        <button
+                          key={m.inventory_item_id}
+                          type="button"
+                          onClick={() =>
+                            setDeductItemIds((prev) => ({
+                              ...prev,
+                              [m.inventory_item_id]: !isChecked,
+                            }))
+                          }
+                          className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs transition-all active:scale-95 ${
+                            isChecked
+                              ? 'bg-forest-50/80 dark:bg-forest-950/40 border-forest-300 dark:border-forest-800 text-forest-900 dark:text-forest-200 font-medium'
+                              : 'bg-stone-100/60 dark:bg-stone-800/40 border-stone-200/60 dark:border-stone-700/60 text-stone-400 line-through'
+                          }`}
+                          title={isChecked ? '本次烹饪扣除此食材' : '保留此食材（未吃完）'}
+                        >
+                          <span
+                            className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] ${
+                              isChecked
+                                ? 'bg-forest-600 text-white'
+                                : 'border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800'
+                            }`}
+                          >
+                            {isChecked && '✓'}
+                          </span>
+                          <span>{m.inventory_name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
-              <button
-                onClick={() => handleCook(selectedRecipe)}
-                disabled={isCookingSuccess}
-                className={`flex-1 py-3.5 px-5 rounded-2xl text-white font-medium text-sm sm:text-base shadow-ambient-emerald transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 ${
-                  isCookingSuccess
-                    ? 'bg-emerald-600 scale-[1.02] shadow-emerald-500/25 ring-2 ring-emerald-400/50'
-                    : 'bg-forest-900 hover:bg-forest-950 dark:bg-forest-700 dark:hover:bg-forest-600'
-                }`}
-              >
-                {isCookingSuccess ? (
-                  <>
-                    <Check className="w-5 h-5 text-white animate-bounce" />
-                    <span className="font-semibold tracking-wide">开饭啦！食材已自动扣减</span>
-                  </>
-                ) : (
-                  <>
-                    <Utensils className="w-4 h-4 text-caramel-300" />
-                    <span>完成下厨 · 自动同步扣减食材库存</span>
-                  </>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {selectedRecipe.id.startsWith('ai-recipe-') && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRecipe(selectedRecipe.id)}
+                    className="py-3 px-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 active:scale-98 text-rose-600 dark:text-rose-300 font-medium text-xs sm:text-sm border border-rose-200/80 dark:border-rose-800/50 transition-all flex items-center justify-center gap-1.5 shadow-soft"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>删除此 AI 菜谱</span>
+                  </button>
                 )}
-              </button>
+                <button
+                  onClick={() => handleCook(selectedRecipe)}
+                  disabled={isCookingSuccess}
+                  className={`flex-1 py-3.5 px-5 rounded-2xl text-white font-medium text-sm sm:text-base shadow-ambient-emerald transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 ${
+                    isCookingSuccess
+                      ? 'bg-emerald-600 scale-[1.02] shadow-emerald-500/25 ring-2 ring-emerald-400/50'
+                      : 'bg-forest-900 hover:bg-forest-950 dark:bg-forest-700 dark:hover:bg-forest-600'
+                  }`}
+                >
+                  {isCookingSuccess ? (
+                    <>
+                      <Check className="w-5 h-5 text-white animate-bounce" />
+                      <span className="font-semibold tracking-wide">开饭啦！食材已同步更新</span>
+                    </>
+                  ) : (
+                    <>
+                      <Utensils className="w-4 h-4 text-caramel-300" />
+                      <span>完成下厨 · 记录手账并同步扣减</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -312,6 +312,7 @@ export default function CookingScrapbookModal({
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#252724] border border-stone-200 dark:border-stone-700/80 shadow-card space-y-3.5 relative overflow-hidden">
           {/* 照片区域 */}
           <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700 group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photoUrl} alt={recipe.name} className="w-full h-full object-cover" />
 
             {/* 快捷换图按钮浮层 */}

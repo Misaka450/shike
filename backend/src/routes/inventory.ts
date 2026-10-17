@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv } from '../middleware/auth.js';
 import { requireAuth } from '../middleware/auth.js';
 import { readJsonBody } from '../middleware/bodyLimit.js';
@@ -11,6 +12,7 @@ import {
   batchAddInventory,
   deleteInventoryItem,
   getInventoryItemById,
+  InventoryError,
   listActiveInventory,
   updateInventoryItem,
 } from '../services/inventoryService.js';
@@ -94,6 +96,12 @@ inventoryRoute.post('/batch', async (c) => {
       201
     );
   } catch (err: unknown) {
+    if (err instanceof InventoryError) {
+      return c.json(
+        { success: false, code: err.code, error: err.message },
+        err.statusCode as ContentfulStatusCode
+      );
+    }
     console.error('[POST /inventory/batch] 批量添加食材失败：', err);
     return c.json(
       { success: false, code: 'BATCH_ADD_FAILED', error: '批量添加食材失败，请稍后重试' },
@@ -130,6 +138,12 @@ inventoryRoute.post('/', async (c) => {
       201
     );
   } catch (err: unknown) {
+    if (err instanceof InventoryError) {
+      return c.json(
+        { success: false, code: err.code, error: err.message },
+        err.statusCode as ContentfulStatusCode
+      );
+    }
     console.error('[POST /inventory] 添加食材失败：', err);
     return c.json(
       { success: false, code: 'ADD_FAILED', error: '添加食材失败，请稍后重试' },

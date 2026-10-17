@@ -15,6 +15,7 @@ const {
   isRecipeVisibleTo,
   initSeedRecipes,
 } = await import('../recipeService.js');
+const { claimLegacyGuestData } = await import('../sessionService.js');
 const { db, runMigrations } = await import('../../db/index.js');
 
 // 迁移与内置菜谱播种不再随模块 import 自动执行，测试需显式初始化一次
@@ -216,5 +217,33 @@ describe('AI 菜谱可见性隔离（isRecipeVisibleTo / listRecipes）', () => 
         `常规推荐列表绝不能包含 AI 菜谱: ${rec.id}`
       );
     }
+  });
+
+  it('访客认领转正时 AI 菜谱应顺利迁移到正式账号且可查看和删除 (LOG-01 修复)', () => {
+    const guestId = `guest_test_${Date.now()}`;
+    const targetUserId = `usr_target_${Date.now()}`;
+    const guestRecipeId = `ai-recipe-guest-${Date.now()}`;
+
+    // 访客生成了一道 AI 菜谱
+    insertMockAiRecipe(guestRecipeId, guestId, '✨ AI定制 · 访客专属菜');
+    assert.equal(isRecipeVisibleTo(guestRecipeId, guestId), true);
+    assert.equal(isRecipeVisibleTo(guestRecipeId, targetUserId), false);
+
+    // 访客注册登录为正式用户，执行认领
+    const claimed = claimLegacyGuestData(guestId, targetUserId);
+    assert.equal(claimed, true);
+
+    // 认领后，正式用户应能看到该菜谱，原访客 ID 不再拥有
+    assert.equal(isRecipeVisibleTo(guestRecipeId, targetUserId), true);
+    assert.equal(isRecipeVisibleTo(guestRecipeId, guestId), false);
+
+    // 正式用户列表应包含此菜谱
+    const userList = listRecipes(undefined, targetUserId);
+    assert.ok(userList.some((r) => r.id === guestRecipeId));
+
+    // 正式用户可以成功删除该迁移过来的菜谱
+    const deleted = deleteRecipe(guestRecipeId, targetUserId);
+    assert.equal(deleted, true);
+    assert.equal(getRecipeById(guestRecipeId), null);
   });
 });

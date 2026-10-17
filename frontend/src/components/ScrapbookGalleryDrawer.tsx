@@ -82,6 +82,7 @@ export default function ScrapbookGalleryDrawer({
               >
                 {/* 拍立得照片缩略图 */}
                 <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={entry.imageUrl}
                     alt={entry.recipeName}

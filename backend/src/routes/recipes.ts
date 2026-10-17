@@ -19,7 +19,7 @@ import {
   getCookingHistory,
   getRecipeById,
   isRecipeVisibleTo,
-  listRecipes,
+  listRecipesPaged,
   recommendRecipes,
   RecipeError,
 } from '../services/recipeService.js';
@@ -61,9 +61,8 @@ recipesRoute.get('/', (c) => {
   const difficulty = c.req.query('difficulty');
   const { limit, offset } = parsed.data;
 
-  const matched = listRecipes({ cuisine, difficulty }, userId);
-  const total = matched.length;
-  const page = matched.slice(offset, offset + limit);
+  // 【架构重构 ARC-01】由 SQLite 物理分页，彻底取代旧版先拉取全量到 JS 堆再 slice 的内存暴涨行为
+  const { recipes: page, total } = listRecipesPaged({ cuisine, difficulty }, userId, limit, offset);
 
   return c.json({
     success: true,

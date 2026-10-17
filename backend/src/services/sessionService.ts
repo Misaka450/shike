@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { db } from '../db/index.js';
 import { config } from '../config.js';
+import { invalidateRecipeCache } from './recipeService.js';
 
 export interface SessionInfo {
   /** 服务端签发的会话令牌，客户端需通过 Authorization: Bearer <token> 携带 */
@@ -126,7 +127,15 @@ export function claimLegacyGuestData(legacyUserId: string, targetUserId: string)
       targetUserId,
       legacyUserId
     );
+    // 【修复 LOG-01】迁移访客会话名下的 AI 定制菜谱，防止注册后私有菜谱丢失
+    db.prepare('UPDATE recipes SET owner_id = ? WHERE owner_id = ?').run(
+      targetUserId,
+      legacyUserId
+    );
   })();
+
+  // 菜谱归属发生变动，清空菜谱内存缓存，使列表能立即读到新归属数据
+  invalidateRecipeCache();
 
   return true;
 }

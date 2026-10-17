@@ -348,6 +348,26 @@ export default function KitchenCookMode({
             </div>
           </div>
 
+          {/* 在库消耗明细提示 */}
+          {recipe.matched_ingredients && recipe.matched_ingredients.length > 0 && (
+            <div className="flex items-center justify-between px-2 text-xs text-stone-400">
+              <span className="flex items-center gap-1.5 text-stone-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>将在库同步扣减:</span>
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                {recipe.matched_ingredients.map((m) => (
+                  <span
+                    key={m.inventory_item_id}
+                    className="px-2.5 py-0.5 rounded-full bg-white/10 text-stone-200 text-[11px] font-medium border border-white/5"
+                  >
+                    {m.inventory_name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 底部完成烹饪大按钮 */}
           <button
             onClick={() => onCook(recipe)}
@@ -355,7 +375,7 @@ export default function KitchenCookMode({
             className="w-full h-14 sm:h-16 rounded-2xl bg-gradient-to-r from-forest-600 via-forest-700 to-forest-600 hover:brightness-110 active:scale-98 text-white font-bold text-base sm:text-lg flex items-center justify-center gap-2.5 shadow-ambient-emerald transition-all border border-forest-500/40"
           >
             <Sparkles className="w-5 h-5 text-caramel-300" />
-            <span>完成烹饪 · 自动扣减食材库存</span>
+            <span>完成烹饪 · 记录手账并扣库</span>
           </button>
         </div>
       </div>

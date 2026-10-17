@@ -40,8 +40,23 @@ function sanitizeNickname(input: unknown, fallback: string): string {
   return cleaned ? cleaned.slice(0, 32) : fallback;
 }
 
-// GET /captcha - 获取 SVG 验证码
+// GET /captcha - 获取 SVG 验证码（加 IP 频控防刷爆内存 SEC-03）
 authRoute.get('/captcha', (c) => {
+  const clientIp = getClientIp(c);
+  if (isIdentifiableClientIp(clientIp)) {
+    const rate = checkRateLimit(`auth:captcha:ip:${clientIp}`, 30, 60 * 1000);
+    if (!rate.allowed) {
+      return c.json(
+        {
+          success: false,
+          code: 'RATE_LIMITED',
+          error: `获取验证码过于频繁，请 ${rate.retryAfterSeconds} 秒后再试`,
+        },
+        429
+      );
+    }
+  }
+
   const captcha = createCaptcha();
   return c.json({
     success: true,
@@ -220,15 +235,15 @@ authRoute.post('/login', optionalAuth, async (c) => {
 
   const cleanUser = typeof username === 'string' ? username.trim().toLowerCase() : '';
 
-  // 1. 登录防爆破与频控检查（账号 / IP 级别）
-  const lockout = checkLockout(ip, cleanUser || undefined);
-  if (lockout.locked) {
+  // 1. IP 级别防爆破预检（单 IP 失败过多直接拦截，防止网络层面洪水试密）
+  const ipLockout = checkLockout(ip);
+  if (ipLockout.locked) {
     return c.json(
       {
         success: false,
         code: 'ACCOUNT_LOCKED',
-        error: `登录尝试次数过多，已被临时锁定，请在 ${lockout.remainingMinutes} 分钟后再试`,
-        remaining_seconds: lockout.remainingSeconds,
+        error: `当前网络登录失败次数过多，已被临时锁定，请在 ${ipLockout.remainingMinutes} 分钟后再试`,
+        remaining_seconds: ipLockout.remainingSeconds,
       },
       429
     );
@@ -262,6 +277,8 @@ authRoute.post('/login', optionalAuth, async (c) => {
     await dummyTimingCheck(password);
   }
 
+  // 【修复 SEC-02】防锁定 DoS：若密码错误，才执行并返回账号锁定状态；
+  // 正确密码持有者永远不会因攻击者恶意尝试错误密码而被拒之门外！
   if (!user || !passwordValid) {
     const failLock = recordFailedLogin(ip, cleanUser);
     if (failLock.locked) {
