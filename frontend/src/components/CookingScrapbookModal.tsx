@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { RecipeRecommendation } from '@/lib/types';
 import { Camera, Sparkles, Star, Download, X, Heart, BookOpen, Check } from 'lucide-react';
 import { compressImage } from '@/lib/imageCompress';
+import { PhotoSourceSheet } from './PhotoSourceSheet';
 
 export interface ScrapbookEntry {
   id: string;
@@ -61,7 +62,9 @@ export default function CookingScrapbookModal({
   const [note, setNote] = useState<string>('热气腾腾出锅，香气扑鼻，这一顿给生活加满元气！');
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [hasSaved, setHasSaved] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoSheetOpen, setPhotoSheetOpen] = useState<boolean>(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
   const chefName = currentUser?.nickname || currentUser?.username || '大厨包包 & 恺恺';
 
@@ -103,7 +106,8 @@ export default function CookingScrapbookModal({
 
   // 更换真实照片
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
     try {
       const compressed = await compressImage(file, 1200, 0.85);
@@ -112,6 +116,8 @@ export default function CookingScrapbookModal({
       onToast('已更新成品照片并同步手账！');
     } catch {
       onToast('照片处理失败，请重试');
+    } finally {
+      input.value = '';
     }
   };
 
@@ -319,7 +325,7 @@ export default function CookingScrapbookModal({
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => setPhotoSheetOpen(true)}
                 className="px-3.5 py-1.5 rounded-full bg-white/90 text-stone-900 text-xs font-medium shadow-md flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all"
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -330,7 +336,15 @@ export default function CookingScrapbookModal({
             <input
               type="file"
               accept="image/*"
-              ref={fileInputRef}
+              capture="environment"
+              ref={cameraInputRef}
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              ref={libraryInputRef}
               onChange={handlePhotoSelect}
               className="hidden"
             />
@@ -393,7 +407,7 @@ export default function CookingScrapbookModal({
         <div className="flex items-center justify-between gap-3 pt-2">
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setPhotoSheetOpen(true)}
             className="px-4 py-2.5 rounded-2xl bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-700 dark:text-stone-300 text-xs font-medium transition-all flex items-center gap-1.5"
           >
             <Camera className="w-3.5 h-3.5" />
@@ -420,6 +434,21 @@ export default function CookingScrapbookModal({
           </div>
         </div>
       </div>
+
+      <PhotoSourceSheet
+        open={photoSheetOpen}
+        onClose={() => setPhotoSheetOpen(false)}
+        onPick={(source) => {
+          setPhotoSheetOpen(false);
+          if (source === 'camera') {
+            cameraInputRef.current?.click();
+          } else {
+            libraryInputRef.current?.click();
+          }
+        }}
+        title="更换成品照片"
+        hint="拍一张刚刚出锅的美味瞬间，或从相册挑选"
+      />
     </div>
   );
 }

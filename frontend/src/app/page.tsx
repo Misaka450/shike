@@ -73,6 +73,7 @@ import CookingScrapbookModal from '@/components/CookingScrapbookModal';
 import ScrapbookGalleryDrawer from '@/components/ScrapbookGalleryDrawer';
 import InventoryCard from '@/components/InventoryCard';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
+import { PhotoSourceSheet } from '@/components/PhotoSourceSheet';
 
 /** 点击「AI 菜谱」按钮时一次生成的菜谱数量 */
 const AI_RECIPE_COUNT = 3;
@@ -244,7 +245,9 @@ export default function ShikeApp() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<FridgeScanResult | null>(null);
   const [selectedScanItems, setSelectedScanItems] = useState<Record<number, boolean>>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
   // 【修复 MEM-01】统一在预览地址变化时释放上一个 blob URL（Base64 URL 无需释放）
   useEffect(() => {
@@ -1357,18 +1360,35 @@ export default function ShikeApp() {
               <input
                 type="file"
                 accept="image/*"
-                ref={fileInputRef}
+                capture="environment"
+                ref={cameraInputRef}
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                ref={libraryInputRef}
                 onChange={handleFileSelect}
                 className="hidden"
               />
 
               {!previewUrl ? (
                 <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     playShutterSound();
-                    fileInputRef.current?.click();
+                    setPhotoSheetOpen(true);
                   }}
-                  className="border-2 border-dashed border-stone-200 dark:border-stone-700/80 hover:border-forest-600/70 rounded-2xl p-9 cursor-pointer transition-all bg-stone-50/50 dark:bg-stone-800/20 hover:bg-forest-50/30 dark:hover:bg-forest-950/20 flex flex-col items-center justify-center gap-3.5 group"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      playShutterSound();
+                      setPhotoSheetOpen(true);
+                    }
+                  }}
+                  className="border-2 border-dashed border-stone-200 dark:border-stone-700/80 hover:border-forest-600/70 rounded-2xl p-9 cursor-pointer transition-all bg-stone-50/50 dark:bg-stone-800/20 hover:bg-forest-50/30 dark:hover:bg-forest-950/20 flex flex-col items-center justify-center gap-3.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/50"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-forest-50 dark:bg-forest-900/40 text-forest-700 dark:text-forest-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
                     {scanMode === 'receipt' ? (
@@ -1381,7 +1401,7 @@ export default function ShikeApp() {
                     <span className="font-semibold text-sm text-stone-800 dark:text-stone-200">
                       {scanMode === 'receipt'
                         ? '点击上传小票或订单截图'
-                        : '点击上传或直接拍照'}
+                        : '选择照片或直接拍摄'}
                     </span>
                     <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
                       {scanMode === 'receipt'
@@ -2555,6 +2575,24 @@ export default function ShikeApp() {
         </button>
       </nav>
       {confirmDialog}
+      <PhotoSourceSheet
+        open={photoSheetOpen}
+        onClose={() => setPhotoSheetOpen(false)}
+        onPick={(source) => {
+          setPhotoSheetOpen(false);
+          if (source === 'camera') {
+            cameraInputRef.current?.click();
+          } else {
+            libraryInputRef.current?.click();
+          }
+        }}
+        title={scanMode === 'receipt' ? '选择小票或订单照片' : '选择照片来源'}
+        hint={
+          scanMode === 'receipt'
+            ? '可现场拍摄小票，或从相册上传订单截图'
+            : '选择直接拍照或从相册中挑选照片'
+        }
+      />
     </div>
   );
 }
