@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, BookOpen, Star, Calendar, Trash2 } from 'lucide-react';
 import { getStoredScrapbookEntries, ScrapbookEntry } from './CookingScrapbookModal';
+import { useConfirmDialog } from './ConfirmDialog';
 
 interface ScrapbookGalleryDrawerProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export default function ScrapbookGalleryDrawer({
   onToast,
 }: ScrapbookGalleryDrawerProps) {
   const [entries, setEntries] = useState<ScrapbookEntry[]>([]);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   useEffect(() => {
     if (isOpen) {
@@ -23,19 +25,29 @@ export default function ScrapbookGalleryDrawer({
     }
   }, [isOpen]);
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('确定要删除这张美食手账拍立得吗？')) return;
+    if (
+      !(await confirm({
+        title: '删除这张美食手账拍立得？',
+        description: '删除后将从手账册中永久移除，无法恢复。',
+        confirmText: '删除',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
     const filtered = entries.filter((item) => item.id !== id);
     setEntries(filtered);
     localStorage.setItem('shike_scrapbook_entries_v1', JSON.stringify(filtered));
     onToast('已删除手账条目');
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) return <>{confirmDialog}</>;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+    <>
+      <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-2xl bg-[#FAFAF7] dark:bg-[#1E201D] rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-modal border border-black/10 dark:border-white/10 space-y-4 max-h-[88vh] overflow-y-auto">
         {/* 顶部标题栏 */}
         <div className="flex items-center justify-between border-b border-stone-200/80 dark:border-stone-800 pb-3.5">
@@ -132,5 +144,7 @@ export default function ScrapbookGalleryDrawer({
         )}
       </div>
     </div>
+    {confirmDialog}
+    </>
   );
 }

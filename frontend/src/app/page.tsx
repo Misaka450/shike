@@ -28,7 +28,6 @@ import {
   Trash2,
   Maximize2,
   ShoppingCart,
-  Zap,
   Copy,
   Receipt,
 } from 'lucide-react';
@@ -73,11 +72,13 @@ import FridgeStorageMap, { StorageZoneId, STORAGE_ZONES } from '@/components/Fri
 import CookingScrapbookModal from '@/components/CookingScrapbookModal';
 import ScrapbookGalleryDrawer from '@/components/ScrapbookGalleryDrawer';
 import InventoryCard from '@/components/InventoryCard';
+import { useConfirmDialog } from '@/components/ConfirmDialog';
 
 /** 点击「AI 菜谱」按钮时一次生成的菜谱数量 */
 const AI_RECIPE_COUNT = 3;
 
 export default function ShikeApp() {
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [activeTab, setActiveTab] = useState<'recipes' | 'scan' | 'inventory'>('recipes');
 
   // Inventory State
@@ -240,11 +241,6 @@ export default function ShikeApp() {
   const [scanMode, setScanMode] = useState<'fridge' | 'receipt'>('fridge');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [compressStats, setCompressStats] = useState<{
-    originalSize: number;
-    compressedSize: number;
-  } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<FridgeScanResult | null>(null);
   const [selectedScanItems, setSelectedScanItems] = useState<Record<number, boolean>>({});
@@ -405,7 +401,7 @@ export default function ShikeApp() {
     setCookingTimer((prev) => Math.max(0, prev + deltaSeconds));
   };
 
-  // 识图多模态链路加速：端侧等比智能压缩 (拍照 / 上传)
+  // 上传/拍照：端侧静默压缩，压缩过程与体积变化不向用户暴露
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -418,10 +414,7 @@ export default function ShikeApp() {
     }
 
     try {
-      setIsCompressing(true);
-      const originalBytes = file.size;
-
-      // 利用 HTML5 Canvas 端侧等比智能压缩至最大宽高 1280px，质量 0.82
+      // 利用 HTML5 Canvas 端侧等比压缩至最大宽高 1280px，质量 0.82
       const compressedDataUrl = await compressImage(file, 1280, 0.82);
       const compressedFile = dataUrlToFile(
         compressedDataUrl,
@@ -431,16 +424,6 @@ export default function ShikeApp() {
       setSelectedFile(compressedFile);
       setPreviewUrl(compressedDataUrl);
       setScanResult(null);
-
-      const compressedBytes = Math.round((compressedDataUrl.length * 3) / 4);
-      setCompressStats({
-        originalSize: originalBytes,
-        compressedSize: compressedBytes,
-      });
-
-      const origMB = (originalBytes / 1024 / 1024).toFixed(1);
-      const compKB = Math.round(compressedBytes / 1024);
-      showToast(`已完成端侧智能压缩（${origMB}MB → ${compKB}KB），多模态识别极速就绪！`);
     } catch (err: any) {
       // 容灾降级：使用原文件
       if (file.size > MAX_UPLOAD_BYTES) {
@@ -458,7 +441,6 @@ export default function ShikeApp() {
       setPreviewUrl(URL.createObjectURL(file));
       setScanResult(null);
     } finally {
-      setIsCompressing(false);
       e.target.value = '';
     }
   };
@@ -721,7 +703,16 @@ export default function ShikeApp() {
   const handleBatchCleanExpired = async () => {
     const expiredItems = inventory.filter((item) => item.urgency_level === 'red');
     if (expiredItems.length === 0) return;
-    if (!window.confirm(`确定将已到期的 ${expiredItems.length} 件食材一并移出冰箱吗？`)) return;
+    if (
+      !(await confirm({
+        title: `移出 ${expiredItems.length} 件已到期食材？`,
+        description: '这些食材已过最佳赏味期，确认后将一并从冰箱库存中移除，操作不可撤销。',
+        confirmText: '移出',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
 
     try {
       for (const item of expiredItems) {
@@ -739,7 +730,14 @@ export default function ShikeApp() {
     if (e) {
       e.stopPropagation();
     }
-    if (!window.confirm('确定要删除这道 AI 定制菜谱吗？')) {
+    if (
+      !(await confirm({
+        title: '删除这道 AI 定制菜谱？',
+        description: '删除后将从今日灵感推荐列表中移除，如需要可重新生成。',
+        confirmText: '删除',
+        tone: 'danger',
+      }))
+    ) {
       return;
     }
     try {
@@ -1364,21 +1362,7 @@ export default function ShikeApp() {
                 className="hidden"
               />
 
-              {isCompressing && (
-                <div className="py-12 flex flex-col items-center justify-center gap-3">
-                  <div className="w-9 h-9 border-3 border-forest-600 border-t-transparent rounded-full animate-spin" />
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
-                      端侧等比智能画质压缩中...
-                    </p>
-                    <p className="text-xs text-stone-400 mt-1">
-                      HTML5 Canvas 智能降采样并输出 WebP，识图多模态链路大幅提速
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {!isCompressing && !previewUrl ? (
+              {!previewUrl ? (
                 <div
                   onClick={() => {
                     playShutterSound();
@@ -1402,30 +1386,15 @@ export default function ShikeApp() {
                     <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
                       {scanMode === 'receipt'
                         ? '山姆/盒马/朴朴/美团订单截图均可 · AI 自动过滤塑料袋等非食品'
-                        : '支持高清手机原图 · 端侧自动智能等比压缩与提速'}
+                        : '支持手机原图，自动优化画质、识别更快'}
                     </p>
                   </div>
                 </div>
-              ) : !isCompressing && previewUrl ? (
+              ) : (
                 <div className="space-y-4">
                   <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-100 dark:bg-stone-800 max-h-[360px] mx-auto border border-stone-200/80 dark:border-stone-700">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={previewUrl} alt="预览图片" className="w-full h-full object-cover" />
-
-                    {/* 压缩体积优化微标签 */}
-                    {compressStats && (
-                      <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md text-white text-[11px] font-mono shadow-sm border border-white/10 z-10">
-                        <Zap className="w-3.5 h-3.5 text-caramel-300" />
-                        <span>
-                          智能压缩 {(compressStats.originalSize / 1024 / 1024).toFixed(1)}MB →{' '}
-                          {Math.round(compressStats.compressedSize / 1024)}KB (降幅{' '}
-                          {Math.round(
-                            (1 - compressStats.compressedSize / compressStats.originalSize) * 100
-                          )}
-                          %)
-                        </span>
-                      </div>
-                    )}
 
                     {/* 动态激光雷达扫描波 (根据模式呈现不同主题辉光) */}
                     {isScanning && (
@@ -1496,7 +1465,6 @@ export default function ShikeApp() {
                         setSelectedFile(null);
                         setPreviewUrl(null);
                         setScanResult(null);
-                        setCompressStats(null);
                       }}
                       className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-md hover:bg-black/80 transition-colors shadow-sm disabled:opacity-30 disabled:pointer-events-none z-10"
                     >
@@ -1540,7 +1508,7 @@ export default function ShikeApp() {
                     </button>
                   )}
                 </div>
-              ) : null}
+              )}
             </div>
 
             {/* Scan Results Bottom Sheet / Card */}
@@ -2586,6 +2554,7 @@ export default function ShikeApp() {
           <span>库存</span>
         </button>
       </nav>
+      {confirmDialog}
     </div>
   );
 }
