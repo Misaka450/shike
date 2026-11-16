@@ -11,8 +11,14 @@ services:
       - TZ=Asia/Shanghai
       - PORT=8081
       - NODE_OPTIONS=--max-old-space-size=384
-      - CPA_URL=http://cli-proxy-api:5201/v1
+      - CPA_URL=${CPA_URL:-http://magpie:3425/v1}
       - CPA_API_KEY=${CPA_API_KEY}
+      - CPA_TEXT_MODEL=${CPA_TEXT_MODEL:-dumate-local/deepseek-v41-flash}
+      - CPA_VISION_MODELS=${CPA_VISION_MODELS:-dumate-local/deepseek-v41-flash}
+      # 关闭推理型模型的思考链（none），否则识图会因输出被思考占满而返回空
+      - CPA_REASONING_EFFORT=${CPA_REASONING_EFFORT:-none}
+      - CPA_TIMEOUT_MS=${CPA_TIMEOUT_MS:-90000}
+      - CPA_VISION_TIMEOUT_MS=${CPA_VISION_TIMEOUT_MS:-40000}
       - DB_PATH=/opt/shike-ai/data/db/shike.db
       # 允许跨域访问后端的来源白名单（多个用英文逗号分隔）
       - CORS_ORIGINS=${CORS_ORIGINS:-http://127.0.0.1:3002,http://localhost:3002}
@@ -23,6 +29,7 @@ services:
     networks:
       - default
       - cliproxyapi_default
+      - magpie_default
     # 健康检查：探测含依赖（数据库）的 /healthz 接口
     healthcheck:
       test:
@@ -87,4 +94,6 @@ services:
 networks:
   default:
   cliproxyapi_default:
+    external: true
+  magpie_default:
     external: true

@@ -666,6 +666,8 @@ ${preference ? `用户口味与烹饪偏好要求：【${preference}】。` : ''
         // 一次要产出多道菜谱：适当提高温度增加差异度，并放宽输出长度上限
         temperature: 0.8,
         max_tokens: 4096,
+        // 关闭推理型模型的思考链：一次要产出多道菜谱，思考会挤占输出长度
+        ...(config.CPA_REASONING_EFFORT ? { reasoning_effort: config.CPA_REASONING_EFFORT } : {}),
       }),
       // 【修复 PER-04】上游如果挂起，必须能主动放弃，否则请求会一直等待直到超时断开
       signal: AbortSignal.timeout(config.CPA_TIMEOUT_MS),

@@ -21,7 +21,7 @@
 | 前端 | Next.js 14（App Router）+ React 18 + Tailwind CSS + lucide-react + TypeScript |
 | 后端 | **Hono** + @hono/node-server + Zod 数据校验 + TypeScript |
 | 数据库 | SQLite（better-sqlite3 驱动，WAL 模式，自带版本化迁移） |
-| AI 服务 | CLIProxyAPI (CPA) 多模态模型反向代理（视觉识别 + 菜谱生成） |
+| AI 服务 | Magpie 模型网关（OpenAI 兼容，当前模型 `dumate-local/deepseek-v41-flash`，文本与多模态共用） |
 | 部署 | Docker + Docker Compose（前后端双容器） |
 
 ---
@@ -98,8 +98,13 @@ cd backend && npm test
 | --- | --- | --- |
 | `PORT` | `8081` | 后端监听端口 |
 | `DB_PATH` | `/opt/shike-ai/data/db/shike.db` | SQLite 数据库路径（Windows 本地开发建议改为 `./data/db/shike.db`） |
-| `CPA_URL` | `http://127.0.0.1:5201/v1` | CPA 模型代理地址 |
-| `CPA_API_KEY` | 空 | CPA 访问凭据（必填） |
+| `CPA_URL` | `http://magpie:3425/v1` | 模型代理地址（OpenAI 兼容）。默认接 Magpie 网关，服务需加入 `magpie_default` 外部网络 |
+| `CPA_API_KEY` | 空 | 模型网关凭据（必填，此处填 Magpie 网关 key） |
+| `CPA_TEXT_MODEL` | `dumate-local/deepseek-v41-flash` | 菜谱生成所用模型 |
+| `CPA_VISION_MODELS` | `dumate-local/deepseek-v41-flash` | 识图模型名单，逗号分隔，按顺序尝试 |
+| `CPA_REASONING_EFFORT` | `none` | 推理强度。推理型模型（如 DeepSeek v4.1 flash）必须设 `none`，否则思考链会吃满输出额度、识图返回空 |
+| `CPA_TIMEOUT_MS` | `90000` | 调用模型上游的总超时（毫秒） |
+| `CPA_VISION_TIMEOUT_MS` | `40000` | 单次识图超时（毫秒），比总超时更短，便于快速转下一个候选模型 |
 | `CORS_ORIGINS` | `http://127.0.0.1:3002,http://localhost:3002` | 允许跨域访问的来源白名单，多个用英文逗号分隔 |
 | `TRUST_PROXY` | `false` | 是否信任 `X-Forwarded-For`。**只有前置了可信反向代理时才设为 `true`**，否则客户端可伪造 IP 绕过登录限流 |
 | `SESSION_TTL_DAYS` | `30` | 登录会话有效期（天） |

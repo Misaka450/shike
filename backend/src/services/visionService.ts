@@ -123,6 +123,8 @@ export async function callCpaVision(
     ],
     temperature: 0.2,
     max_tokens: 2048,
+    // 关闭推理型模型的思考链，避免 token 消耗在思考上导致结果为空
+    ...(config.CPA_REASONING_EFFORT ? { reasoning_effort: config.CPA_REASONING_EFFORT } : {}),
   };
 
   const response = await fetch(url, {

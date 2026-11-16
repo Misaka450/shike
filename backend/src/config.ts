@@ -34,6 +34,15 @@ export const config = {
     .filter(Boolean),
 
   /**
+   * 推理强度控制（可选）。当前上游 DeepSeek v4.1 flash 属推理型模型，
+   * 默认识图时会先做长段思考，容易把 max_tokens 全部吃在 reasoning 上，
+   * 导致 content 返回空、前端只能看到「识别失败」。
+   * 置为 "none" 可关闭思考链：识图与菜谱生成都只输出结果，速度提升数倍，
+   * 也不再有输出被截断的风险。留空则沿用上游默认行为。
+   */
+  CPA_REASONING_EFFORT: (process.env.CPA_REASONING_EFFORT || '').trim(),
+
+  /**
    * SQLite 数据库文件路径
    * 默认使用相对路径（本地开发友好）；Docker 部署时由 docker-compose.yml 显式指定绝对路径
    */
